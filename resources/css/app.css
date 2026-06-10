@@ -1,3 +1,89 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================
+   CUSTOM UTILITIES FOR STITCH DESIGN
+   ============================================ */
+
+/* Glassmorphism Panel */
+.glass-panel {
+    @apply bg-surface/70 dark:bg-surface/70 backdrop-blur-xl;
+    border: 1px solid rgba(255, 45, 120, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 255, 204, 0.05);
+}
+
+/* Luminous Border Effect */
+.luminous-outline {
+    @apply relative;
+}
+
+.luminous-outline::before {
+    content: '';
+    @apply absolute rounded-md pointer-events-none;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 1px;
+    background: linear-gradient(180deg, rgba(255, 45, 120, 0.3) 0%, rgba(0, 255, 204, 0.1) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    border-radius: inherit;
+}
+
+/* Metric Sparkline Animation */
+.metric-sparkline {
+    @apply relative w-full rounded-lg;
+    background: linear-gradient(90deg, rgba(255, 45, 120, 0), rgba(255, 45, 120, 0.3), rgba(255, 45, 120, 0.7), rgba(255, 45, 120, 1));
+    height: 2px;
+}
+
+.metric-sparkline::after {
+    content: '';
+    @apply absolute top-[-2px] right-0 rounded-lg;
+    width: 6px;
+    height: 6px;
+    background: #ff2d78;
+    box-shadow: 0 0 10px #ff2d78;
+}
+
+/* Hide scrollbar while maintaining scroll functionality */
+.scroll-hide::-webkit-scrollbar {
+    display: none;
+}
+
+.scroll-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Smooth animations for luxury effect */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes glow {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(255, 45, 120, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 45, 120, 0.8);
+    }
+}
+
+.animate-glow {
+    animation: glow 3s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out;
+}
