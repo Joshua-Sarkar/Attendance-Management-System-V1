@@ -112,7 +112,7 @@
         <!-- Overview Stats Grid -->
         <div class="space-y-2">
             <h4 class="text-lg font-semibold text-on-surface">Today's Attendance Status</h4>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-6">
                 <!-- Total Users Monitored -->
                 <div class="glass-panel p-6 rounded-lg border border-outline-variant/30 flex items-center justify-between">
                     <div>
@@ -167,6 +167,32 @@
                     <div class="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center text-error">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- On Leave Today -->
+                <div class="glass-panel p-6 rounded-lg border border-outline-variant/30 flex items-center justify-between">
+                    <div>
+                        <span class="text-on-surface-variant text-sm font-medium">On Leave Today</span>
+                        <h3 class="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-1">{{ $stats['on_leave'] ?? 0 }}</h3>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- WFH Today -->
+                <div class="glass-panel p-6 rounded-lg border border-outline-variant/30 flex items-center justify-between">
+                    <div>
+                        <span class="text-on-surface-variant text-sm font-medium">WFH Today</span>
+                        <h3 class="text-3xl font-bold text-teal-600 dark:text-teal-400 mt-1">{{ $stats['wfh'] ?? 0 }}</h3>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-teal-100 dark:bg-teal-900/20 flex items-center justify-center text-teal-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-3m0 0l7-4 7 4M5 9v10a1 1 0 001 1h2a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h2a1 1 0 001-1V9" />
                         </svg>
                     </div>
                 </div>
@@ -252,11 +278,15 @@
                                                 bg-primary/20 text-primary
                                             @elseif($status === 'late')
                                                 bg-tertiary/20 text-tertiary
+                                            @elseif($status === 'on_leave')
+                                                bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300
+                                            @elseif($status === 'wfh')
+                                                bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300
                                             @else
                                                 bg-error/20 text-error
                                             @endif
                                         ">
-                                            {{ $status }}
+                                            {{ str_replace('_', ' ', $status) }}
                                         </span>
                                     </td>
                                 </tr>

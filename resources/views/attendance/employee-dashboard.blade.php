@@ -131,11 +131,15 @@
                                             bg-primary/20 text-primary
                                         @elseif($today_attendance->status === 'late')
                                             bg-tertiary/20 text-tertiary
+                                        @elseif($today_attendance->status === 'on_leave')
+                                            bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300
+                                        @elseif($today_attendance->status === 'wfh')
+                                            bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300
                                         @else
                                             bg-error/20 text-error
                                         @endif
                                     ">
-                                        {{ $today_attendance->status }}
+                                        {{ str_replace('_', ' ', $today_attendance->status) }}
                                     </span>
                                 </p>
                             </div>

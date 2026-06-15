@@ -158,13 +158,17 @@
                                             bg-primary/20 text-primary
                                         @elseif($status === 'late')
                                             bg-tertiary/20 text-tertiary
+                                        @elseif($status === 'on_leave')
+                                            bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300
+                                        @elseif($status === 'wfh')
+                                            bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300
                                         @elseif($status === 'weekend')
                                             bg-surface-container-high/55 text-on-surface-variant
                                         @else
                                             bg-error/20 text-error
                                         @endif
                                     ">
-                                        {{ $status }}
+                                        {{ str_replace('_', ' ', $status) }}
                                     </span>
                                 </td>
                             </tr>

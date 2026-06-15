@@ -69,9 +69,29 @@ class AttendanceService
      */
     public function getTodayAttendance(User $user): ?Attendance
     {
-        return Attendance::where('user_id', $user->id)
+        $attendance = Attendance::where('user_id', $user->id)
             ->where('date', today())
             ->first();
+
+        if (!$attendance) {
+            $todayStr = today()->format('Y-m-d');
+            $leave = \App\Models\LeaveRequest::where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->where('start_date', '<=', $todayStr . ' 23:59:59')
+                ->where('end_date', '>=', $todayStr . ' 00:00:00')
+                ->first();
+
+            if ($leave) {
+                $status = $leave->leave_type === 'work_from_home' ? 'wfh' : 'on_leave';
+                $attendance = new Attendance([
+                    'user_id' => $user->id,
+                    'date' => today(),
+                    'status' => $status,
+                ]);
+            }
+        }
+
+        return $attendance;
     }
 
     /**
@@ -142,14 +162,34 @@ class AttendanceService
         $employees = $query->orderBy('name')->get();
 
         // Eager load the attendance records for the specific date
-        $attendances = Attendance::where('date', $date)
+        $attendances = Attendance::where('date', \Carbon\Carbon::parse($date)->startOfDay())
             ->whereIn('user_id', $employees->pluck('id'))
             ->get()
             ->keyBy('user_id');
 
+        // Eager load the approved leave requests overlapping this date
+        $leaves = \App\Models\LeaveRequest::whereIn('user_id', $employees->pluck('id'))
+            ->where('status', 'approved')
+            ->where('start_date', '<=', $date . ' 23:59:59')
+            ->where('end_date', '>=', $date . ' 00:00:00')
+            ->get()
+            ->keyBy('user_id');
+
         // Map them together
-        return $employees->map(function ($employee) use ($attendances) {
-            $employee->today_attendance = $attendances->get($employee->id);
+        return $employees->map(function ($employee) use ($attendances, $leaves, $date) {
+            $attendance = $attendances->get($employee->id);
+            $leave = $leaves->get($employee->id);
+
+            if ($leave && !$attendance) {
+                $status = $leave->leave_type === 'work_from_home' ? 'wfh' : 'on_leave';
+                $attendance = new Attendance([
+                    'user_id' => $employee->id,
+                    'date' => Carbon::parse($date),
+                    'status' => $status,
+                ]);
+            }
+
+            $employee->today_attendance = $attendance;
             return $employee;
         });
     }
@@ -164,6 +204,8 @@ class AttendanceService
         $present = 0;
         $late = 0;
         $absent = 0;
+        $onLeave = 0;
+        $wfh = 0;
 
         foreach ($employees as $emp) {
             $attendance = $emp->today_attendance;
@@ -174,6 +216,10 @@ class AttendanceService
                     $late++;
                 } elseif ($attendance->status === 'absent') {
                     $absent++;
+                } elseif ($attendance->status === 'on_leave') {
+                    $onLeave++;
+                } elseif ($attendance->status === 'wfh') {
+                    $wfh++;
                 }
             } else {
                 $absent++;
@@ -185,6 +231,8 @@ class AttendanceService
             'present' => $present,
             'late' => $late,
             'absent' => $absent,
+            'on_leave' => $onLeave,
+            'wfh' => $wfh,
         ];
     }
 
@@ -200,9 +248,17 @@ class AttendanceService
             ->get()
             ->keyBy(fn($att) => $att->date->format('Y-m-d'));
 
+        $leaves = \App\Models\LeaveRequest::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->where('start_date', '<=', today()->format('Y-m-d') . ' 23:59:59')
+            ->where('end_date', '>=', $startDate->format('Y-m-d') . ' 00:00:00')
+            ->get();
+
         $present = 0;
         $late = 0;
         $absent = 0;
+        $onLeave = 0;
+        $wfh = 0;
         $totalHours = 0.0;
 
         for ($i = 0; $i < $days; $i++) {
@@ -214,8 +270,16 @@ class AttendanceService
             }
 
             $dateStr = $date->format('Y-m-d');
+            $dayLeave = $leaves->first(function($leave) use ($date) {
+                $dateStr = $date->format('Y-m-d');
+                $leaveStartStr = $leave->start_date->format('Y-m-d');
+                $leaveEndStr = $leave->end_date->format('Y-m-d');
+                return $dateStr >= $leaveStartStr && $dateStr <= $leaveEndStr;
+            });
+
             if (isset($attendances[$dateStr])) {
                 $record = $attendances[$dateStr];
+                
                 if ($record->status === 'present') {
                     $present++;
                 } elseif ($record->status === 'late') {
@@ -223,15 +287,22 @@ class AttendanceService
                 } elseif ($record->status === 'absent') {
                     $absent++;
                 }
-
-                // Add hours worked
+                
                 if ($record->check_in_time) {
+                    // Add hours worked
                     $endTime = $record->check_out_time ?? now();
                     $totalHours += $record->check_in_time->diffInMinutes($endTime, absolute: true) / 60.0;
                 }
             } else {
-                // No record exists for this weekday - count as absent
-                $absent++;
+                if ($dayLeave) {
+                    if ($dayLeave->leave_type === 'work_from_home') {
+                        $wfh++;
+                    } else {
+                        $onLeave++;
+                    }
+                } else {
+                    $absent++;
+                }
             }
         }
 
@@ -239,6 +310,8 @@ class AttendanceService
             'present' => $present,
             'late' => $late,
             'absent' => $absent,
+            'on_leave' => $onLeave,
+            'wfh' => $wfh,
             'total_hours' => $totalHours,
         ];
     }

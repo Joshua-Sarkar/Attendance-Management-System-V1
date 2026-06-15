@@ -185,7 +185,7 @@
             <div class="glass-panel p-6 rounded-lg border border-outline-variant/30 space-y-6">
                 <h4 class="text-lg font-semibold text-on-surface pb-2 border-b border-outline-variant/30">Last 30 Days Statistics</h4>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                     <!-- Present Days -->
                     <div class="bg-surface-container p-5 rounded-lg border border-outline-variant/20 flex flex-col justify-between">
                         <span class="text-on-surface-variant text-sm font-medium">Days Present</span>
@@ -202,6 +202,18 @@
                     <div class="bg-surface-container p-5 rounded-lg border border-outline-variant/20 flex flex-col justify-between">
                         <span class="text-on-surface-variant text-sm font-medium">Days Absent</span>
                         <h3 class="text-4xl font-bold text-error mt-2">{{ $stats['absent'] }}</h3>
+                    </div>
+
+                    <!-- On Leave Days -->
+                    <div class="bg-surface-container p-5 rounded-lg border border-outline-variant/20 flex flex-col justify-between">
+                        <span class="text-on-surface-variant text-sm font-medium">On Leave</span>
+                        <h3 class="text-4xl font-bold text-blue-600 dark:text-blue-400 mt-2">{{ $stats['on_leave'] ?? 0 }}</h3>
+                    </div>
+
+                    <!-- WFH Days -->
+                    <div class="bg-surface-container p-5 rounded-lg border border-outline-variant/20 flex flex-col justify-between">
+                        <span class="text-on-surface-variant text-sm font-medium">WFH Days</span>
+                        <h3 class="text-4xl font-bold text-teal-600 dark:text-teal-400 mt-2">{{ $stats['wfh'] ?? 0 }}</h3>
                     </div>
 
                     <!-- Total Hours Worked -->
@@ -268,13 +280,17 @@
                                                 bg-primary/20 text-primary
                                             @elseif($status === 'late')
                                                 bg-tertiary/20 text-tertiary
+                                            @elseif($status === 'on_leave')
+                                                bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300
+                                            @elseif($status === 'wfh')
+                                                bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300
                                             @elseif($status === 'weekend')
                                                 bg-surface-container-high/55 text-on-surface-variant
                                             @else
                                                 bg-error/20 text-error
                                             @endif
                                         ">
-                                            {{ $status }}
+                                            {{ str_replace('_', ' ', $status) }}
                                         </span>
                                     </td>
                                 </tr>

@@ -61,6 +61,12 @@ class AttendanceController extends Controller
             ->get()
             ->keyBy(fn($att) => $att->date->format('Y-m-d'));
 
+        $leaves = \App\Models\LeaveRequest::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->where('start_date', '<=', today())
+            ->where('end_date', '>=', $startDate)
+            ->get();
+
         $history = [];
         // Loop in reverse chronological order (from today backwards)
         for ($i = $days - 1; $i >= 0; $i--) {
@@ -76,13 +82,23 @@ class AttendanceController extends Controller
                 }
             }
 
+            $dayLeave = $leaves->first(function($leave) use ($date) {
+                return $date->between($leave->start_date, $leave->end_date);
+            });
+
+            $status = $record ? $record->status : ($date->isWeekend() ? 'weekend' : 'absent');
+            
+            if (!$record && $dayLeave) {
+                $status = $dayLeave->leave_type === 'work_from_home' ? 'wfh' : 'on_leave';
+            }
+
             $history[] = [
                 'date' => $date,
                 'day_of_week' => $date->format('l'),
                 'is_weekend' => $date->isWeekend(),
                 'check_in' => $record?->check_in_time,
                 'check_out' => $record?->check_out_time,
-                'status' => $record ? $record->status : ($date->isWeekend() ? 'weekend' : 'absent'),
+                'status' => $status,
                 'hours' => $hours,
             ];
         }
