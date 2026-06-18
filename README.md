@@ -1,59 +1,222 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# AMS-V1 — Attendance Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A production-ready workforce management platform built with Laravel 12, designed to manage employees, attendance, leave requests, departmental hierarchy, and workforce operations from a single centralized dashboard.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Overview
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+AMS-V1 is a full-stack Human Resource and Attendance Management System developed to replace spreadsheet-driven workforce operations and reduce dependency on third-party HR platforms.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+The system provides:
 
-## Learning Laravel
+* Employee Management
+* Department Management
+* Role-Based Access Control
+* Attendance Tracking
+* Leave Management
+* Manager Hierarchy
+* Workforce Monitoring
+* Employee Profile Management
+* Bulk Employee Import from Zimyo Exports
+* Production Deployment on Hostinger
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Built using Laravel, TailwindCSS, Breeze Authentication, MySQL, and GitHub-based deployment workflows.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## Features
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Authentication & Security
 
-### Premium Partners
+* Secure authentication using Laravel Breeze
+* Role-based access control
+* Admin, Manager, and Employee roles
+* Temporary password provisioning
+* Mandatory password change on first login
+* Encrypted sensitive employee information
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+---
 
-## Contributing
+### Employee Management
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+* Create, edit, and manage employees
+* Auto-generated employee IDs
+* Department assignment
+* Reporting manager hierarchy
+* Employee profile management
+* Workforce status tracking
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Attendance Management
 
-## Security Vulnerabilities
+* Employee check-in/check-out
+* Daily attendance records
+* Attendance status monitoring
+* Present, Late, Absent, Leave, and Work From Home tracking
+* Attendance analytics and dashboard metrics
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+### Leave Management
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+* Employee leave requests
+* Manager/Admin approval workflow
+* Leave history tracking
+* Leave status management
+* Attendance override business rules
+
+---
+
+### Workforce Hierarchy
+
+* Department structure
+* Reporting managers
+* Manager-specific employee visibility
+* Workforce monitoring by hierarchy
+
+---
+
+### Employee Profile System
+
+Employee profiles support:
+
+* Personal Information
+* Contact Details
+* Employment Details
+* Government Identification
+* Banking Information
+* Emergency Contacts
+
+Sensitive information is stored securely using encryption.
+
+---
+
+### Zimyo Migration Engine
+
+Built-in import pipeline for migrating workforce data from Zimyo exports.
+
+Capabilities include:
+
+* Bulk employee creation
+* Department creation
+* Manager hierarchy mapping
+* Employee profile generation
+* Temporary credential generation
+* Duplicate prevention
+* Update existing employee records
+
+Successfully tested against a real-world workforce dataset.
+
+---
+
+## Technology Stack
+
+### Backend
+
+* Laravel 12
+* PHP 8+
+* MySQL
+* Eloquent ORM
+
+### Frontend
+
+* Blade
+* Tailwind CSS
+* Laravel Breeze
+
+### DevOps
+
+* Git
+* GitHub
+* Hostinger / cPanel Deployment
+* Composer
+* Vite
+
+---
+
+## User Roles
+
+### Admin
+
+* Full system access
+* Manage workforce
+* Approve leave requests
+* Import employees
+* Manage departments
+
+### Manager
+
+* View assigned employees
+* Approve employee leave requests
+* Monitor attendance
+
+### Employee
+
+* Check In / Check Out
+* Submit leave requests
+* View attendance history
+* Manage profile
+
+---
+
+## Current Project Status
+
+### Completed
+
+* Authentication System
+* Role-Based Access Control
+* Department Management
+* Employee Management
+* Attendance Tracking
+* Leave Management
+* Manager Hierarchy
+* Employee Profiles
+* Zimyo Import Engine
+* Production Deployment
+
+### In Progress
+
+* Web-Based Employee Import Interface
+* Employee Overview Dashboard
+* Import Audit Logs
+
+### Planned
+
+* Reporting Module
+* Automated Backups
+* Advanced Analytics
+* Payroll Integration
+
+---
+
+## Deployment
+
+Production environment is deployed using:
+
+GitHub → Hostinger/cPanel → Laravel Application
+
+Changes are version controlled and deployed through Git workflows.
+
+---
+
+## Project Philosophy
+
+AMS-V1 was built with a simple goal:
+
+> Own the workforce data.
+>
+> Remove spreadsheet chaos.
+>
+> Replace repetitive HR operations with structured systems.
+
+This project evolved from a basic attendance tracker into a scalable Human Resource Management platform capable of supporting real-world organizational workflows.
+
+---
+
+## Author
+
+Joshua Sarkar
+
+Built with Laravel, stubbornness, caffeine, Git commits, production bugs, and far too many terminal sessions.
