@@ -10,29 +10,54 @@ class EmployeeService
 {
     public function create(array $data): User
     {
-        $data['password'] = Hash::make($data['password']);
+        $userData = collect($data)->only([
+            'employee_id', 'name', 'email', 'phone', 'password', 'role', 'status', 'joining_date', 'must_change_password', 'department_id', 'manager_id', 'admin_id'
+        ])->toArray();
 
-        unset($data['password_confirmation']);
+        $userData['password'] = Hash::make($userData['password']);
+        unset($userData['password_confirmation']);
 
-        return User::create($data);
+        $user = User::create($userData);
+
+        $profileData = collect($data)->except([
+            'employee_id', 'name', 'email', 'phone', 'password', 'password_confirmation', 'role', 'status', 'joining_date', 'must_change_password', 'department_id', 'manager_id', 'admin_id'
+        ])->toArray();
+
+        $profileData['user_id'] = $user->id;
+        $user->employeeProfile()->create($profileData);
+
+        return $user;
     }
+
     public function update(User $user, array $data): User
-{
-    // Only update password if a new one was provided
-    if (!empty($data['password'])) {
-        $data['password'] = Hash::make($data['password']);
-    } else {
-        unset($data['password']);
-        unset($data['password_confirmation']);
+    {
+        $userData = collect($data)->only([
+            'employee_id', 'name', 'email', 'phone', 'password', 'role', 'status', 'joining_date', 'department_id', 'manager_id', 'admin_id'
+        ])->toArray();
+
+        if (!empty($userData['password'])) {
+            $userData['password'] = Hash::make($userData['password']);
+        } else {
+            unset($userData['password']);
+            unset($userData['password_confirmation']);
+        }
+
+        $user->update($userData);
+
+        $profileData = collect($data)->except([
+            'employee_id', 'name', 'email', 'phone', 'password', 'password_confirmation', 'role', 'status', 'joining_date', 'department_id', 'manager_id', 'admin_id'
+        ])->toArray();
+
+        $user->employeeProfile()->updateOrCreate(
+            ['user_id' => $user->id],
+            $profileData
+        );
+
+        return $user;
     }
 
-    $user->update($data);
-
-    return $user;
-}
-
-public function delete(User $user): void
-{
-    $user->delete();
-}
+    public function delete(User $user): void
+    {
+        $user->delete();
+    }
 }

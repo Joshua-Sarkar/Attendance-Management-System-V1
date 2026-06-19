@@ -123,6 +123,19 @@
                 <span class="font-medium text-sm">Leaves</span>
             </a>
 
+            @if(auth()->user()->role === 'admin')
+                <!-- Import Employees -->
+                <a href="{{ route('admin.import.show') }}"
+                   class="flex items-center gap-stack-md px-stack-md py-stack-sm rounded-md transition-all duration-200
+                   {{ request()->routeIs('admin.import.*')
+                        ? 'bg-primary text-white shadow-[0_0_10px_rgba(255,45,120,0.3)]'
+                        : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface' }}">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <span class="font-medium text-sm">Import Employees</span>
+                </a>
+            @endif
         @endif
 
     </nav>

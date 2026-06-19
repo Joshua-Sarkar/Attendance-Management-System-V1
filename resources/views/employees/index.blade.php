@@ -134,6 +134,11 @@
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex items-center gap-2">
 
+                                                <a href="{{ route('employees.show', $employee) }}"
+                                                   class="px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
+                                                    View Profile
+                                                </a>
+
                                                 <a href="{{ route('employees.edit', $employee) }}"
                                                    class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
                                                     Edit

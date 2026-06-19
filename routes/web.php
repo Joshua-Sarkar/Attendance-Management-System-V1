@@ -6,6 +6,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ManagerAttendanceController;
 use App\Http\Controllers\LeaveRequestController;
+use App\Http\Controllers\ImportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -45,23 +46,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
 
-    Route::get('/employees', [EmployeeController::class, 'index'])
-        ->name('employees.index');
-
-    Route::get('/employees/create', [EmployeeController::class, 'create'])
-        ->name('employees.create');
-
-    Route::post('/employees', [EmployeeController::class, 'store'])
-        ->name('employees.store');
-
-    Route::get('/employees/{user}/edit', [EmployeeController::class, 'edit'])
-        ->name('employees.edit');
-
-    Route::put('/employees/{user}', [EmployeeController::class, 'update'])
-        ->name('employees.update');
-
-    Route::delete('/employees/{user}', [EmployeeController::class, 'destroy'])
-        ->name('employees.destroy');
+    Route::resource('employees', EmployeeController::class)->parameters([
+        'employees' => 'user',
+    ]);
 
     // Attendance routes
     Route::get('/employee/dashboard', [AttendanceController::class, 'employeeDashboard'])
@@ -91,6 +78,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/leaves/{leaveRequest}/approve', [LeaveRequestController::class, 'approve'])->name('leaves.approve');
     Route::post('/leaves/{leaveRequest}/reject', [LeaveRequestController::class, 'reject'])->name('leaves.reject');
     Route::post('/leaves/{leaveRequest}/override', [LeaveRequestController::class, 'override'])->name('leaves.override');
+
+    // Admin Employee Import routes
+    Route::middleware('admin')->group(function () {
+        Route::get('/admin/import-employees', [ImportController::class, 'showUploadForm'])->name('admin.import.show');
+        Route::post('/admin/import-employees', [ImportController::class, 'handleUpload'])->name('admin.import.handle');
+    });
 });
 
 require __DIR__.'/auth.php';

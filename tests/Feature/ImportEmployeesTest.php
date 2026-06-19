@@ -227,3 +227,109 @@ test('it imports employees and updates profiles correctly from xlsx', function (
         unlink($tempFile);
     }
 });
+
+test('admin can access import page and upload file successfully', function () {
+    // 1. Setup pre-requisites
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'status' => 'active',
+    ]);
+
+    $engineering = Department::create([
+        'name' => 'Engineering',
+        'code' => 'ENG',
+        'description' => 'Engineering Department',
+    ]);
+
+    // Create temporary Excel file
+    $tempFile = tempnam(sys_get_temp_dir(), 'import_test_web') . '.xlsx';
+    
+    $headers = [
+        'Employee Code', 'Full Name', 'Official Email ID', 'Department', 'Employee Status'
+    ];
+    $data = [
+        [
+            'Employee Code' => '100',
+            'Full Name' => 'Web User One',
+            'Official Email ID' => 'webuser1@example.com',
+            'Department' => 'Engineering',
+            'Employee Status' => 'Active',
+        ]
+    ];
+
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    foreach ($headers as $colIndex => $header) {
+        $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1);
+        $sheet->setCellValue($colLetter . '1', $header);
+    }
+    foreach ($data as $rowIndex => $rowData) {
+        foreach ($headers as $colIndex => $header) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1);
+            $sheet->setCellValue($colLetter . ($rowIndex + 2), $rowData[$header] ?? '');
+        }
+    }
+    $writer = new Xlsx($spreadsheet);
+    $writer->save($tempFile);
+
+    // Create an UploadedFile instance
+    $uploadedFile = new \Illuminate\Http\UploadedFile(
+        $tempFile,
+        'employees.xlsx',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        null,
+        true
+    );
+
+    // 2. Access page as Admin
+    $response = $this->actingAs($admin)
+        ->get(route('admin.import.show'));
+    $response->assertStatus(200);
+
+    // 3. Upload file as Admin
+    $uploadResponse = $this->actingAs($admin)
+        ->post(route('admin.import.handle'), [
+            'file' => $uploadedFile,
+        ]);
+    
+    $uploadResponse->assertRedirect();
+    $uploadResponse->assertSessionHas('success');
+
+    // 4. Assert user was created
+    $user = User::where('employee_id', 'EMP00100')->first();
+    expect($user)->not->toBeNull();
+    expect($user->name)->toBe('Web User One');
+    expect($user->email)->toBe('webuser1@example.com');
+
+    // 5. Assert ImportLog was created
+    $log = \App\Models\ImportLog::where('filename', 'employees.xlsx')->first();
+    expect($log)->not->toBeNull();
+    expect($log->run_by_user_id)->toBe($admin->id);
+    expect($log->rows_processed)->toBe(1);
+    expect($log->created_count)->toBe(1);
+    expect($log->error_count)->toBe(0);
+
+    // Clean up
+    if (file_exists($tempFile)) {
+        @unlink($tempFile);
+    }
+});
+
+test('non-admin users cannot access the import page or upload files', function () {
+    $employee = User::factory()->create([
+        'role' => 'employee',
+        'status' => 'active',
+    ]);
+
+    // 1. Try to access page as employee
+    $response = $this->actingAs($employee)
+        ->get(route('admin.import.show'));
+    $response->assertStatus(403);
+
+    // 2. Try to upload file as employee
+    $uploadResponse = $this->actingAs($employee)
+        ->post(route('admin.import.handle'), [
+            'file' => 'dummy-data',
+        ]);
+    $uploadResponse->assertStatus(403);
+});

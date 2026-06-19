@@ -109,7 +109,101 @@ class EmployeeController extends Controller
             $rules['admin_id'] = ['nullable', 'exists:users,id'];
         }
 
+        $profileRules = [
+            'father_name' => ['nullable', 'string', 'max:255'],
+            'mother_name' => ['nullable', 'string', 'max:255'],
+            'gender' => ['nullable', 'string', 'in:Male,Female,Other'],
+            'date_of_birth' => ['nullable', 'date'],
+            'marital_status' => ['nullable', 'string', 'max:100'],
+            'date_of_marriage' => ['nullable', 'date'],
+            'nationality' => ['nullable', 'string', 'max:255'],
+            'blood_group' => ['nullable', 'string', 'max:20'],
+            'personal_email' => ['nullable', 'email', 'max:255'],
+            'mobile_no' => ['nullable', 'string', 'max:255'],
+            'pf_uan' => ['nullable', 'string', 'max:255'],
+            'passport_no' => ['nullable', 'string', 'max:255'],
+            'aadhar_card' => ['nullable', 'string', 'max:255'],
+            'pan' => ['nullable', 'string', 'max:255'],
+            'pf_no' => ['nullable', 'string', 'max:255'],
+            'esi_number' => ['nullable', 'string', 'max:255'],
+            'date_of_gratuity' => ['nullable', 'date'],
+            'payroll_type' => ['nullable', 'string', 'max:255'],
+            'contract_end_date' => ['nullable', 'date'],
+            'office_landline' => ['nullable', 'string', 'max:255'],
+            'leave_rule' => ['nullable', 'string', 'max:255'],
+            'shift' => ['nullable', 'string', 'max:255'],
+            'designation' => ['nullable', 'string', 'max:255'],
+            'grade' => ['nullable', 'string', 'max:255'],
+            'employee_type' => ['nullable', 'string', 'max:255'],
+            'company' => ['nullable', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'biometric_id' => ['nullable', 'string', 'max:255'],
+            'hiring_source' => ['nullable', 'string', 'max:255'],
+            'source_of_verification' => ['nullable', 'string', 'max:255'],
+            'city_type' => ['nullable', 'string', 'max:255'],
+            'notice_days' => ['nullable', 'integer', 'min:0'],
+            'state_name' => ['nullable', 'string', 'max:255'],
+            'current_address1' => ['nullable', 'string', 'max:255'],
+            'current_address2' => ['nullable', 'string', 'max:255'],
+            'current_country' => ['nullable', 'string', 'max:255'],
+            'current_state' => ['nullable', 'string', 'max:255'],
+            'current_city' => ['nullable', 'string', 'max:255'],
+            'current_zip' => ['nullable', 'string', 'max:255'],
+            'same_as_current_address' => ['nullable', 'boolean'],
+            'permanent_address1' => ['nullable', 'string', 'max:255'],
+            'permanent_address2' => ['nullable', 'string', 'max:255'],
+            'permanent_country' => ['nullable', 'string', 'max:255'],
+            'permanent_state' => ['nullable', 'string', 'max:255'],
+            'permanent_city' => ['nullable', 'string', 'max:255'],
+            'permanent_zip' => ['nullable', 'string', 'max:255'],
+            'payment_type' => ['nullable', 'string', 'max:255'],
+            'bank_name' => ['nullable', 'string', 'max:255'],
+            'account_holder_name' => ['nullable', 'string', 'max:255'],
+            'account_no' => ['nullable', 'string', 'max:255'],
+            'ifsc_code' => ['nullable', 'string', 'max:255'],
+            'emergency_name' => ['nullable', 'string', 'max:255'],
+            'emergency_relationship' => ['nullable', 'string', 'max:255'],
+            'emergency_address' => ['nullable', 'string', 'max:255'],
+            'emergency_email' => ['nullable', 'email', 'max:255'],
+            'emergency_mobile' => ['nullable', 'string', 'max:255'],
+            'degree_name' => ['nullable', 'string', 'max:255'],
+            'institution_name' => ['nullable', 'string', 'max:255'],
+            'passing_year' => ['nullable', 'string', 'max:255'],
+            'percentage' => ['nullable', 'string', 'max:255'],
+            'previous_company_name' => ['nullable', 'string', 'max:255'],
+            'previous_job_title' => ['nullable', 'string', 'max:255'],
+            'previous_from_date' => ['nullable', 'date'],
+            'previous_to_date' => ['nullable', 'date'],
+            'probation_period' => ['nullable', 'string', 'max:255'],
+            'probation_confirm_date' => ['nullable', 'date'],
+            'separation_date' => ['nullable', 'date'],
+            'last_working_day' => ['nullable', 'date'],
+            'previous_year_experience' => ['nullable', 'numeric', 'min:0'],
+            'years_completed' => ['nullable', 'numeric', 'min:0'],
+            'overall_year_experience' => ['nullable', 'numeric', 'min:0'],
+        ];
+
+        $rules = array_merge($rules, $profileRules);
+
         $validated = $request->validate($rules);
+
+        // Address copy logic for same_as_current_address
+        if ($request->boolean('same_as_current_address')) {
+            $validated['permanent_address1'] = $validated['current_address1'] ?? null;
+            $validated['permanent_address2'] = $validated['current_address2'] ?? null;
+            $validated['permanent_country'] = $validated['current_country'] ?? null;
+            $validated['permanent_state'] = $validated['current_state'] ?? null;
+            $validated['permanent_city'] = $validated['current_city'] ?? null;
+            $validated['permanent_zip'] = $validated['current_zip'] ?? null;
+            $validated['same_as_current_address'] = true;
+        } else {
+            $validated['same_as_current_address'] = false;
+        }
+
+        // Fill joining_date in profileData if set on User
+        if (isset($validated['joining_date'])) {
+            $validated['joining_date'] = $validated['joining_date'];
+        }
 
         // Auto-generate employee ID
         $validated['employee_id'] = $this->generateEmployeeId();
@@ -181,6 +275,24 @@ class EmployeeController extends Controller
                 'employee_id' => $employee->employee_id,
                 'password' => $tempPassword,
             ]);
+    }
+
+    // =========================================================
+    // Show — view an employee profile
+    // =========================================================
+
+    public function show(User $user): View
+    {
+        $currentUser = auth()->user();
+
+        // Admin can view anyone, non-admin can only view themselves
+        if ($currentUser->role !== 'admin' && $currentUser->id !== $user->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $user->load(['employeeProfile', 'department', 'manager', 'admin']);
+
+        return view('employees.show', compact('user'));
     }
 
     // =========================================================
@@ -264,7 +376,101 @@ class EmployeeController extends Controller
             $rules['admin_id'] = ['nullable', 'exists:users,id'];
         }
 
+        $profileRules = [
+            'father_name' => ['nullable', 'string', 'max:255'],
+            'mother_name' => ['nullable', 'string', 'max:255'],
+            'gender' => ['nullable', 'string', 'in:Male,Female,Other'],
+            'date_of_birth' => ['nullable', 'date'],
+            'marital_status' => ['nullable', 'string', 'max:100'],
+            'date_of_marriage' => ['nullable', 'date'],
+            'nationality' => ['nullable', 'string', 'max:255'],
+            'blood_group' => ['nullable', 'string', 'max:20'],
+            'personal_email' => ['nullable', 'email', 'max:255'],
+            'mobile_no' => ['nullable', 'string', 'max:255'],
+            'pf_uan' => ['nullable', 'string', 'max:255'],
+            'passport_no' => ['nullable', 'string', 'max:255'],
+            'aadhar_card' => ['nullable', 'string', 'max:255'],
+            'pan' => ['nullable', 'string', 'max:255'],
+            'pf_no' => ['nullable', 'string', 'max:255'],
+            'esi_number' => ['nullable', 'string', 'max:255'],
+            'date_of_gratuity' => ['nullable', 'date'],
+            'payroll_type' => ['nullable', 'string', 'max:255'],
+            'contract_end_date' => ['nullable', 'date'],
+            'office_landline' => ['nullable', 'string', 'max:255'],
+            'leave_rule' => ['nullable', 'string', 'max:255'],
+            'shift' => ['nullable', 'string', 'max:255'],
+            'designation' => ['nullable', 'string', 'max:255'],
+            'grade' => ['nullable', 'string', 'max:255'],
+            'employee_type' => ['nullable', 'string', 'max:255'],
+            'company' => ['nullable', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'biometric_id' => ['nullable', 'string', 'max:255'],
+            'hiring_source' => ['nullable', 'string', 'max:255'],
+            'source_of_verification' => ['nullable', 'string', 'max:255'],
+            'city_type' => ['nullable', 'string', 'max:255'],
+            'notice_days' => ['nullable', 'integer', 'min:0'],
+            'state_name' => ['nullable', 'string', 'max:255'],
+            'current_address1' => ['nullable', 'string', 'max:255'],
+            'current_address2' => ['nullable', 'string', 'max:255'],
+            'current_country' => ['nullable', 'string', 'max:255'],
+            'current_state' => ['nullable', 'string', 'max:255'],
+            'current_city' => ['nullable', 'string', 'max:255'],
+            'current_zip' => ['nullable', 'string', 'max:255'],
+            'same_as_current_address' => ['nullable', 'boolean'],
+            'permanent_address1' => ['nullable', 'string', 'max:255'],
+            'permanent_address2' => ['nullable', 'string', 'max:255'],
+            'permanent_country' => ['nullable', 'string', 'max:255'],
+            'permanent_state' => ['nullable', 'string', 'max:255'],
+            'permanent_city' => ['nullable', 'string', 'max:255'],
+            'permanent_zip' => ['nullable', 'string', 'max:255'],
+            'payment_type' => ['nullable', 'string', 'max:255'],
+            'bank_name' => ['nullable', 'string', 'max:255'],
+            'account_holder_name' => ['nullable', 'string', 'max:255'],
+            'account_no' => ['nullable', 'string', 'max:255'],
+            'ifsc_code' => ['nullable', 'string', 'max:255'],
+            'emergency_name' => ['nullable', 'string', 'max:255'],
+            'emergency_relationship' => ['nullable', 'string', 'max:255'],
+            'emergency_address' => ['nullable', 'string', 'max:255'],
+            'emergency_email' => ['nullable', 'email', 'max:255'],
+            'emergency_mobile' => ['nullable', 'string', 'max:255'],
+            'degree_name' => ['nullable', 'string', 'max:255'],
+            'institution_name' => ['nullable', 'string', 'max:255'],
+            'passing_year' => ['nullable', 'string', 'max:255'],
+            'percentage' => ['nullable', 'string', 'max:255'],
+            'previous_company_name' => ['nullable', 'string', 'max:255'],
+            'previous_job_title' => ['nullable', 'string', 'max:255'],
+            'previous_from_date' => ['nullable', 'date'],
+            'previous_to_date' => ['nullable', 'date'],
+            'probation_period' => ['nullable', 'string', 'max:255'],
+            'probation_confirm_date' => ['nullable', 'date'],
+            'separation_date' => ['nullable', 'date'],
+            'last_working_day' => ['nullable', 'date'],
+            'previous_year_experience' => ['nullable', 'numeric', 'min:0'],
+            'years_completed' => ['nullable', 'numeric', 'min:0'],
+            'overall_year_experience' => ['nullable', 'numeric', 'min:0'],
+        ];
+
+        $rules = array_merge($rules, $profileRules);
+
         $validated = $request->validate($rules);
+
+        // Address copy logic for same_as_current_address
+        if ($request->boolean('same_as_current_address')) {
+            $validated['permanent_address1'] = $validated['current_address1'] ?? null;
+            $validated['permanent_address2'] = $validated['current_address2'] ?? null;
+            $validated['permanent_country'] = $validated['current_country'] ?? null;
+            $validated['permanent_state'] = $validated['current_state'] ?? null;
+            $validated['permanent_city'] = $validated['current_city'] ?? null;
+            $validated['permanent_zip'] = $validated['current_zip'] ?? null;
+            $validated['same_as_current_address'] = true;
+        } else {
+            $validated['same_as_current_address'] = false;
+        }
+
+        // Fill joining_date in profileData if set on User
+        if (isset($validated['joining_date'])) {
+            $validated['joining_date'] = $validated['joining_date'];
+        }
 
         $targetRole = $currentUser->role === 'admin' ? $validated['role'] : 'employee';
 
