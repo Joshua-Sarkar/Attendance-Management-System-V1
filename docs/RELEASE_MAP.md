@@ -22,6 +22,7 @@ The table below maps the development timeline, indicating completion commits, in
 | 10 | **Phase 4.4** | `82fd54a` | None | `v1.1-phase-4.4` | **Punctuality Audit Center:** Built a search-filtered attendance list grid showing check-in timelines and average late arrival metrics, complete with dark-gold theme. |
 | 11 | **Phase 4.5** | `b599f5a` | None | `v1.1-phase-4.5` | **Leave Balance Ledger & Concurrency:** Created transactional double-entry ledger audits, console accrual tools, and pessimistic row locking (`lockForUpdate`). |
 | 12 | **Phase 4.6** | `2385dbb` | `3d517c9`, `918ad86` (Patch) | `v1.2-phase-4.6` | **Leave Workflow Simplification:** Made `leave_type` nullable on create. Removed dropdowns for employees and moved Paid/Unpaid selection to approval. Added sidebar badge counters. *(Note: Tag `v1.2-phase-4.6` already exists in repository).* |
+| 13 | **Phase 4.7** | `Current Commit` | None | `v1.2-docs-baseline` | **Architecture Traceability & Consolidation:** Conducted retrospective architecture audit, verified and created all missing historical tags, established Feature/Database/Test maps and ADR Decision Logs. |
 
 ---
 
@@ -69,6 +70,9 @@ git tag -a v1.1-phase-4.5 b599f5a -m "Phase 4.5 complete - Leave ledger balances
 # (Tag already exists in repository: v1.2-phase-4.6 on 2385dbb)
 # If recreating:
 # git tag -a v1.2-phase-4.6 2385dbb -m "Phase 4.6 complete - Simplified leave workflows, nullable request classification, and sidebar count badges"
+
+# Phase 4.7 (Architecture Traceability & Consolidation)
+git tag -a v1.2-docs-baseline -m "Phase 4.7 complete - Retrospective architecture audit and documentation consolidation baseline"
 ```
 
 ---

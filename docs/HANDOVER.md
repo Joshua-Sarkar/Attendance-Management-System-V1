@@ -21,8 +21,9 @@ This document serves as the primary entry point for developers, maintainers, aud
 
 * **Current Version:** `v1.2-phase-4.6`
 * **Latest Release Tag:** `v1.2-phase-4.6` (pointing to commit `2385dbb`)
+* **Documentation Baseline Tag:** `v1.2-docs-baseline` (pointing to Phase 4.7 consolidation commit)
 * **Current Branch:** `main`
-* **Latest Commit:** `918ad86` ("Phase 4.6 - Add PHP 8.1+ null safety checks for leave type rendering")
+* **Latest Commit:** `Phase 4.7 Architecture Traceability baseline`
 * **Production URL:** Hostinger production directory root (cPanel mappings active)
 * **Production Database:** MySQL 8.0
 * **Current Deployment Environment:** Linux Shared Web Server (Hostinger PHP 8.2 runtime)
@@ -183,6 +184,11 @@ Refer to these documentation files inside the `/docs` directory:
 4. [AMS_CHRONICLE.md](file:///c:/Users/Lenovo/AMS-V1/docs/AMS_CHRONICLE.md): Chronological chronicle narrative of the system's requirements and evolution.
 5. [CURRENT_STATE.md](file:///c:/Users/Lenovo/AMS-V1/docs/CURRENT_STATE.md): Metadata details, active configurations, and codebase statistics.
 6. [DEPLOYMENT.md](file:///c:/Users/Lenovo/AMS-V1/docs/DEPLOYMENT.md): Checklists for local setups, Hostinger deployment, backup schedules, and recovery plans.
+7. [FEATURE_MAP.md](file:///c:/Users/Lenovo/AMS-V1/docs/FEATURE_MAP.md): Subsystems maps listing purpose, lineage, codebase files, tests, and operational statuses.
+8. [DATABASE_MAP.md](file:///c:/Users/Lenovo/AMS-V1/docs/DATABASE_MAP.md): Tables column schemas, foreign key mappings, sensitive attributes, and engine parity guidelines.
+9. [DECISION_LOG.md](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md): Architectural Decisions Record (ADR) history tracing rationale and consequences.
+10. [TEST_MAP.md](file:///c:/Users/Lenovo/AMS-V1/docs/TEST_MAP.md): Detailed verification suite maps detailing features and validation coverage logic.
+11. [ARCHITECTURE_MAP.md](file:///c:/Users/Lenovo/AMS-V1/docs/ARCHITECTURE_MAP.md): High-level subsystem boundaries interactions and data flow.
 
 ---
 

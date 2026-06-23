@@ -46,7 +46,19 @@ Always use annotated git tags (`-a`) instead of lightweight tags. Include a deta
 
 ---
 
-## 3. Release Naming Guidelines
+## 3. Git Branch Strategy & Taxonomy
+
+AMS-V1 uses a structured branch taxonomy to keep development history traceable:
+* **`main` (Active / Production):** The source of truth for all deployed features. Deployed directly to Hostinger production. All release and docs tags point here.
+* **`develop` (Legacy Development):** Used during early phase C/D/E integrations. Now kept as a historical record.
+* **`master` (Legacy Production):** Legacy production branch replaced by `main`.
+* **`phase-d-leave-management` (Topic / Phase Branch):** Historical branch used to write early leave request models.
+* **`ui-layout` / `ui-redesign` (Topic / Feature Branches):** Specialized branches used to test dashboard stylesheets and glassmorphic designs.
+* **`hotfix/[module]-[short-desc]` (Operational / Hotfix):** Created directly from `main` to patch production bugs. Merged back to `main` with annotated tag updates.
+
+---
+
+## 4. Release Naming Guidelines
 
 Every production release must have release notes in the repository changelog or GitHub releases page:
 * **Release Title:** Match the version string and target module (e.g., `AMS-V1 v1.2.0: Leave Workflow & Security Hardening`).
@@ -58,7 +70,7 @@ Every production release must have release notes in the repository changelog or 
 
 ---
 
-## 4. Hotfix Procedures
+## 5. Hotfix Procedures
 
 Hotfixes address issues in production that cannot wait for a scheduled release cycle.
 
@@ -94,7 +106,7 @@ Hotfixes address issues in production that cannot wait for a scheduled release c
 
 ---
 
-## 5. Rollback Procedures
+## 6. Rollback Procedures
 
 If a deployment fails, use the following guidelines to restore service.
 
@@ -132,7 +144,7 @@ php artisan migrate:rollback --step=1
 
 ---
 
-## 6. Deployment Procedures
+## 7. Deployment Procedures
 
 Use these steps for deployments to Hostinger Shared Linux Servers:
 

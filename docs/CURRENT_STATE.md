@@ -7,8 +7,9 @@ This document represents the live, production-ready operational state of the Att
 ## 1. System Metadata
 
 * **Current Version:** `v1.2-phase-4.6`
-* **Latest Tag:** `v1.2-phase-4.6` (pointing to commit `2385dbb`)
-* **Latest Commit:** `918ad86` ("Phase 4.6 - Add PHP 8.1+ null safety checks for leave type rendering")
+* **Latest Functional Tag:** `v1.2-phase-4.6` (pointing to commit `2385dbb`)
+* **Documentation Baseline Tag:** `v1.2-docs-baseline` (pointing to Phase 4.7 consolidation commit)
+* **Latest Commit:** `Phase 4.7 Architecture Traceability baseline`
 * **Current Branch:** `main`
 * **Production Environment:** Hostinger Linux Shared Server (cPanel setup)
 * **Production Database Engine:** MySQL 8.0 (utilizing transactional row locks; local runs use SQLite in-memory)

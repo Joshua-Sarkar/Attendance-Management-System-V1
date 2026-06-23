@@ -324,7 +324,3 @@ Define `main` as the single source of truth and deployment branch. Document lega
 * **Related Files:**
   * [VERSIONING.md](file:///c:/Users/Lenovo/AMS-V1/docs/VERSIONING.md) (standards documentation)
 * **Related Release:** Phase 4.7 (`v1.2-docs-baseline` tag)
-
----
-
-*(Subsequent ADRs documented in respective phase commits)*

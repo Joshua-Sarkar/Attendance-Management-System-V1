@@ -881,3 +881,4 @@ Tracks changes to user leave balances.
 11. **Phase 4.4:** Added the Punctuality Audit Center with search filters and average delay metrics.
 12. **Phase 4.5:** Added the `LeaveLedgerEntry` transaction log table, pessimistic row locking, and monthly accrual tasks.
 13. **Phase 4.6:** Simplified leave requests, moved leave type selection to the approval stage, added sidebar notification badges, and resolved view warnings.
+14. **Phase 4.7:** Conducted retrospective architecture audit, established Feature Map, Database Map, Test Map, Decision Log, and Architecture Map, and registered historical git tags locally, consolidating the documentation baseline under tag `v1.2-docs-baseline`.
