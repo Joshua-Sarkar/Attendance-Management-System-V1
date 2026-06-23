@@ -103,4 +103,22 @@ This document indexes all verification suites, automated test files, and asserti
 
 ---
 
+## 5. Leave Request Management Testing
+
+### Automated Test Files
+* **[LeaveManagementTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/LeaveManagementTest.php)**
+  * *Coverage Focus:* Validates employee leave submissions, validation gates, manager approvals, cancellations, and attendance overrides.
+  * *Scenarios Verified:*
+    1. **Employee Submission:** Confirms employees can apply for leaves with nullable types, recording them as pending.
+    2. **Manager Approval Boundaries:** Checks that assigned managers can approve requests as paid/unpaid or reject them, while non-assigned managers are blocked (403 unauthorized).
+    3. **Circular Approval Prevention:** Verifies managers cannot approve their own leave requests; manager requests must be reviewed by Admins.
+    4. **Admin Auto-Approvals:** Confirms Admin self-submissions are automatically approved but require selecting Paid/Unpaid on creation.
+    5. **Date Constraint Validations:** Blocks submissions where start date is in the past, or end date is before start date.
+    6. **Overlaps Block:** Asserts that overlapping leave request dates are rejected during validation, but cancelled requests do not block future bookings.
+    7. **Cancellation Actions:** Verifies employees can cancel their own pending or approved requests.
+    8. **Attendance Sync (Rule B):** Confirms approved leaves automatically override physical dashboard status as `on_leave` or `wfh` if no check-in exists.
+    9. **Physical Override:** Confirms a physical dashboard clock-in event overrides active leave requests, setting status back to `present` or `late`.
+
+---
+
 *(Other domain tests detailed in respective phase commits)*

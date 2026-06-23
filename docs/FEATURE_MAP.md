@@ -165,7 +165,38 @@ To log employee daily check-in and check-out timestamps, evaluate check-in delay
 ---
 
 ## 5. Leave Request Management
-*(Reconciled in leaves phase)*
+
+### Business Purpose
+To allow employees to submit leave applications, route requests to designated supervisors, enable managers to review and classify leaves during approval, handle employee self-cancellations, and permit administrators to override past decisions.
+
+### Architecture Lineage
+* **Original Business Problem:** Leaves were managed via emails and verbal agreements. Staff had to classify their own leaves (Casual, Sick, LOP), which led to incorrect ledger entries and verification bottlenecks.
+* **Phase Introduced:** Phase E (Foundation) and Phase 4.6 (nullable simplified leave types).
+* **Major Evolutions:**
+  * *Phase E (Commit `125e72e`):* Built core `leave_requests` and `leave_request_logs` tables. Added status transitions (`pending`, `approved`, `rejected`, `cancelled`). Allowed employees to choose leave types on submission.
+  * *Phase 4.6 (Commit `2385dbb`):* Simplified workflow by making the `leave_type` database column nullable. Removed dropdowns for standard employees, moving Paid/Unpaid classification strictly to the manager's approval action. Admin self-submissions remain auto-approved but require choosing paid/unpaid on create.
+* **Current Implementation:** Employees submit requests containing only dates and reasons. Managers review pending rows and select either **Approve as Paid** or **Approve as Unpaid**, or reject. The request log table audits all status changes.
+
+### Codebase Mappings
+* **Controllers:**
+  * [LeaveRequestController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/LeaveRequestController.php) (submits requests, checks balance limits, applies approvals, rejects, cancels, and admin overrides)
+* **Models:**
+  * [LeaveRequest.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/LeaveRequest.php) (defines dates and total days)
+  * [LeaveRequestLog.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/LeaveRequestLog.php) (stores request actions audit trail)
+* **Routes:**
+  * `leaves.index` (list logs)
+  * `leaves.create` / `leaves.store` (blank apply form)
+  * `leaves.approve` / `leaves.reject` / `leaves.cancel` / `leaves.override`
+* **Views:**
+  * `resources/views/leaves/index.blade.php`, `create.blade.php`, `show.blade.php`
+* **Migrations:**
+  * `2026_06_11_153000_create_leave_requests_table.php`
+  * `2026_06_11_153500_create_leave_request_logs_table.php` (tracks user details and status changes)
+  * `2026_06_23_184204_make_leave_type_nullable_in_leave_requests_table.php` (nullable change)
+* **Feature Tests:**
+  * [LeaveManagementTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/LeaveManagementTest.php) (asserts request submissions, manager approval boundaries, overlapping date checks, self-cancellation routes, and admin self-approvals)
+* **Release Introduced:** `v1.0-phase-e` (Foundation) and `v1.2-phase-4.6` (Simplified Nullable Leave)
+* **Current Operational Status:** Fully operational. Active overlaps are validated and blocked during submission to prevent duplicate bookings.
 
 ---
 

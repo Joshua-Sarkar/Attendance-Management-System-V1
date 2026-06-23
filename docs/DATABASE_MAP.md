@@ -42,11 +42,56 @@ erDiagram
     users ||--o| departments : "belongs_to department_id"
     users ||--|| employee_profiles : "1:1 profile user_id"
     attendances }o--|| users : "belongs_to user_id"
+    leave_requests }o--|| users : "submitted_by user_id"
+    leave_requests }o--|| users : "approved_by approver_id"
+    leave_request_logs }o--|| leave_requests : "logs_changes_of leave_request_id"
+    leave_request_logs }o--|| users : "action_taken_by user_id"
 ```
 
 ---
 
 ## 2. Table Definitions
+
+### Table: `leave_requests`
+Stores employee leave request applications and approval status classifications.
+
+* **Columns:**
+  * `id` (`bigint unsigned`, Primary Key, Auto Increment): Unique identifier.
+  * `user_id` (`bigint unsigned`, Foreign Key -> `users.id`): Submitting employee.
+  * `leave_type` (`varchar(255)`, Nullable): Resolved type (`paid_leave`, `unpaid_leave`, `work_from_home` - nullable for employees on create).
+  * `start_date` (`date`): Leave start date.
+  * `end_date` (`date`): Leave end date.
+  * `total_days` (`int unsigned`): Total booking duration.
+  * `reason` (`text`): Employee description.
+  * `status` (`varchar(255)`, Default: `'pending'`): Current state (`pending`, `approved`, `rejected`, `cancelled`).
+  * `approver_id` (`bigint unsigned`, Nullable, Foreign Key -> `users.id`): Approving manager or administrator.
+  * `approved_at` (`timestamp`, Nullable): Action timestamp.
+  * `rejection_reason` (`text`, Nullable): Reason typed by supervisor.
+  * `notes` (`text`, Nullable): Reviewer comments.
+  * `created_at` / `updated_at` (`timestamp`): Database timestamps.
+
+* **Indexes & Keys:**
+  * `PRIMARY KEY (id)`
+  * `FOREIGN KEY leave_requests_user_id_foreign (user_id) REFERENCES users(id) ON DELETE CASCADE`
+  * `FOREIGN KEY leave_requests_approver_id_foreign (approver_id) REFERENCES users(id) ON DELETE SET NULL`
+
+### Table: `leave_request_logs`
+Logs the chronological audit trail of all actions performed on a leave request.
+
+* **Columns:**
+  * `id` (`bigint unsigned`, Primary Key): Unique row identifier.
+  * `leave_request_id` (`bigint unsigned`, Foreign Key -> `leave_requests.id`): Monitored request.
+  * `from_status` (`varchar(255)`, Nullable): Prior status state.
+  * `to_status` (`varchar(255)`): Updated status state.
+  * `action` (`varchar(255)`): Executed action code (e.g. `submit`, `approve_paid`, `approve_unpaid`, `reject`, `cancel`, `override`).
+  * `notes` (`text`, Nullable): Auditor notes.
+  * `user_id` (`bigint unsigned`, Foreign Key -> `users.id`): User executing the action.
+  * `created_at` (`timestamp`): Timestamp of the audit event.
+
+* **Indexes & Keys:**
+  * `PRIMARY KEY (id)`
+  * `FOREIGN KEY leave_request_logs_leave_request_id_foreign (leave_request_id) REFERENCES leave_requests(id) ON DELETE CASCADE`
+  * `FOREIGN KEY leave_request_logs_user_id_foreign (user_id) REFERENCES users(id) ON DELETE CASCADE`
 
 ### Table: `attendances`
 Tracks daily physical clock-in and clock-out logs and stores punctuality status flags.

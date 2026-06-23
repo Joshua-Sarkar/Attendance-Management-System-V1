@@ -89,4 +89,13 @@ graph TD
 
 ---
 
+### Leave Request Management Relationships
+* **Leave Management → Leave Balance Ledger:**
+  * When a Manager/Admin reviews a leave request and clicks **Approve as Paid**, the transaction logic deducts the request's `total_days` from the user's `leave_balance` and logs a matching `deduction` ledger entry.
+  * If a user cancels an approved paid leave, the cancellation controller refunds the amount back to `leave_balance` and records a `refund` ledger entry. Approvals as **Unpaid Leave** bypass balance changes.
+* **Leave Management → Workforce Management:**
+  * Managers can only see and approve leave requests for employees who are assigned directly to them via the `manager_id` foreign key.
+
+---
+
 *(Subsystem relationships for other domains will be detailed in respective phase commits)*

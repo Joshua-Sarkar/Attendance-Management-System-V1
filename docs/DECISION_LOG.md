@@ -142,4 +142,31 @@ In the `Attendance` model, retrieve the `attendance.new_rules_start_date` config
 
 ---
 
+## ADR 6: Simplified Nullable Leave Requests (Leave Type Nullability)
+
+### Problem
+In early iterations, standard employees had to classify their own leave requests (Casual Leave, Sick Leave, Earned Leave) when applying. However, employees frequently selected types for which they had insufficient balance, or misclassified standard LOP leaves. This resulted in significant HR correction overhead and manual rollbacks.
+
+### Context
+We want standard employees to only be responsible for specifying *when* they need time off and *why*, while leaving classification decisions (Paid vs Unpaid LOP) to the managers and administrators during review.
+
+### Alternatives Considered
+* **Option A: Client-side Balance Checks:** Validate balances dynamically in Javascript on the employee form.
+  * *Trade-off:* Does not prevent users from choosing types they are not eligible for (e.g. sick leaves vs casual leaves classification criteria are determined by company policies, not just balance count).
+* **Option B: Leave Nullability & Manager Classification (Chosen):** Make `leave_type` nullable, remove dropdowns for standard employees, and enforce type assignment at approval.
+
+### Chosen Solution
+Create database migration `2026_06_23_184204_make_leave_type_nullable_in_leave_requests_table.php` which alters the `leave_requests.leave_type` column to nullable. Remove dropdown select inputs from employee Blade forms. In `LeaveRequestController.php`, require managers to specify `leave_type = 'paid_leave'` or `'unpaid_leave'` during approval.
+
+### Consequences
+* **Positive:** Drastically reduced HR management overhead, eliminates invalid employee self-bookings, and ensures every paid leave is explicitly reviewed and verified by a manager.
+* **Negative:** Admins applying for leave themselves still require type definitions on creation (handled via standard auto-approval pathways in `LeaveRequestController@store`).
+* **Related Files:**
+  * `database/migrations/2026_06_23_184204_make_leave_type_nullable_in_leave_requests_table.php` (schema migration)
+  * [LeaveRequestController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/LeaveRequestController.php) (actions updates)
+  * `resources/views/leaves/create.blade.php` (Blade template form inputs)
+* **Related Release:** Phase 4.6 (`v1.2-phase-4.6` completion commit `2385dbb`)
+
+---
+
 *(Subsequent ADRs documented in respective phase commits)*
