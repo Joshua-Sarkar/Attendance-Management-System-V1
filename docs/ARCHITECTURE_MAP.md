@@ -70,4 +70,14 @@ graph TD
 
 ---
 
+### Employee Profiles Relationships
+* **Employee Profiles → Authentication & Security:**
+  * Sensitive data attributes mapped in [EmployeeProfile](file:///c:/Users/Lenovo/AMS-V1/app/Models/EmployeeProfile.php) use the Laravel encrypter configuration from the core config keys, ensuring decryption fails if the `APP_KEY` environment value changes.
+* **Employee Profiles → Zimyo Import Engine:**
+  * The Zimyo import parser directly instantiates and populates [EmployeeProfile](file:///c:/Users/Lenovo/AMS-V1/app/Models/EmployeeProfile.php) rows during Pass 1, writing personal and bank data.
+* **Employee Profiles → Profile Correction Requests:**
+  * When an employee submits a correction request, it points to a specific field in their [EmployeeProfile](file:///c:/Users/Lenovo/AMS-V1/app/Models/EmployeeProfile.php) table (e.g. `bank_name` or `pan`). When resolved by an Admin, the profile record is updated directly.
+
+---
+
 *(Subsystem relationships for other domains will be detailed in respective phase commits)*

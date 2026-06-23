@@ -88,7 +88,37 @@ To partition the workforce into distinct business units (departments), manage pr
 ---
 
 ## 3. Employee Profiles
-*(Reconciled in profiles phase)*
+
+### Business Purpose
+To store extended employee metadata (addresses, education, bank accounts, emergency contacts, previous jobs) securely and automatically encrypt sensitive government identifiers and banking fields at rest using AES-256 encryption.
+
+### Architecture Lineage
+* **Original Business Problem:** Sensitive identity identifiers (Aadhaar numbers, PAN, bank account numbers, IFSC codes) were stored in plain text, violating data protection protocols. Additionally, importing experience fields (e.g. "5 Years 2 Months") failed because database tables defined experience duration as numeric float fields.
+* **Phase Introduced:** Phase 4 (Profiles and Encrypted Fields) and Phase 4.3 (Experience format corrections).
+* **Major Evolutions:**
+  * *Phase 4 (Commit `3369d64`):* Created `employee_profiles` table to isolate non-authentication attributes in a 1:1 mapped relationship to `users`. Integrated multi-tab views and enabled model-level encryption casts.
+  * *Phase 4.3 (Commit `ea088c8`):* Altered the experience columns (`previous_year_experience`, `years_completed`, `overall_year_experience`) from decimal fields to nullable strings to allow importing of textual metrics (e.g., "5.5 Years" or text logs).
+* **Current Implementation:** Profile data is entered across organized form tabs (Personal, Contact, Address, Bank, Education, Experience). When saving, standard Eloquent model encryption casts automatically encrypt sensitive columns in SQLite/MySQL.
+
+### Codebase Mappings
+* **Controllers:**
+  * [EmployeeController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/EmployeeController.php) (saves profile tabs data)
+  * [ProfileController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/ProfileController.php) (updates basic user settings)
+* **Models:**
+  * [EmployeeProfile.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/EmployeeProfile.php) (implements database encryption casts)
+* **Routes:**
+  * `employees.edit` / `employees.update`
+  * `profile.edit` / `profile.update`
+* **Views:**
+  * `resources/views/employees/create.blade.php`, `edit.blade.php`, `show.blade.php` (organized tabs layout)
+* **Migrations:**
+  * `2026_06_18_093324_create_employee_profiles_table.php` (creates profiles table)
+  * `2026_06_19_084725_change_experience_columns_to_strings_in_employee_profiles.php` (experience fields type change)
+* **Feature Tests:**
+  * [EmployeeProfileTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/EmployeeProfileTest.php) (verifies 1:1 bidirectional relations, cascade deletion on user delete, and database encryption casts validation)
+  * [EmployeeProfileAccessTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/EmployeeProfileAccessTest.php) (verifies access boundary rules for profiles)
+* **Release Introduced:** `v1.1-phase-4` (Profiles) and `v1.1-phase-4.3` (Experience fixes)
+* **Current Operational Status:** Fully operational. Aadhaar, PAN, Bank Account Number, and IFSC Code are encrypted automatically. Alphanumeric experience values import successfully.
 
 ---
 

@@ -64,4 +64,56 @@ Create a helper method `generateEmployeeId()` inside [EmployeeController.php](fi
 
 ---
 
+## ADR 3: Model-Level Encryption Casts for Sensitive Identification & Financial Columns
+
+### Problem
+Storing government identifiers (Aadhaar, PAN) and banking coordinates in plain text exposes employees to identify theft and places the company in legal violation of privacy regulations.
+
+### Context
+We must ensure that even if the raw database is leaked or accessed by direct database admins, sensitive credentials remain unreadable without the encryption key. However, the application code should easily query, read, and display these records in forms when authenticated HR staff requests them.
+
+### Alternatives Considered
+* **Option A: Database-level TDE (Transparent Data Encryption):** Use MySQL native encryption functions.
+  * *Trade-off:* Database vendor lock-in; complicates migration between engines (e.g. SQLite for testing vs MySQL for prod).
+* **Option B: Manual Crypt Facades in Controllers:** Explicitly invoke `Crypt::encrypt()` and `Crypt::decrypt()` on every controller save and read.
+  * *Trade-off:* Highly repetitive, verbose code; high risk of developer error.
+* **Option C: Eloquent Model Casts (Chosen):** Map target columns to the `encrypted` cast type in the model configuration array.
+
+### Chosen Solution
+Declare target columns (`aadhar_card`, `pan`, `account_no`, `ifsc_code`) in the `$casts` property array of [EmployeeProfile.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/EmployeeProfile.php) with the type `encrypted`.
+
+### Consequences
+* **Positive:** Automatic transparent handling. The database stores ciphertext strings (AES-256), but the application reads plain text naturally. SQLite local tests run seamlessly using the same casts.
+* **Negative:** Encrypted fields cannot be searched using standard SQL `WHERE ... LIKE` queries. Sorting on these fields is also impossible. Since these are private IDs, searching and sorting on them is not a business requirement.
+* **Related Files:**
+  * [EmployeeProfile.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/EmployeeProfile.php) (implements casts)
+* **Related Release:** Phase 4 (`v1.1-phase-4` completion commit `3369d64`)
+
+---
+
+## ADR 4: Alphanumeric String Schemas for Experience Fields
+
+### Problem
+In initial schema drafts, experience metrics (e.g. total previous experience, years completed) were mapped as numeric decimal fields. When importing Zimyo export spreadsheets, parsing text duration descriptions like `"3 Years 6 Months"` or `"4.5"` caused database query exceptions during database insertion.
+
+### Context
+Excel sheets exported from Zimyo and similar third-party services contain organic, non-standardized string representations of experience metrics. Forcing numeric conversion in the import script led to data truncation (e.g. loss of months) or import crashes.
+
+### Alternatives Considered
+* **Option A: Excel Text Parsers:** Write complex regex functions to convert `"3 Years 6 Months"` to float `3.5`.
+  * *Trade-off:* Excel sheets contain many unpredictable string variations, causing continuous parsing failures and high code complexity.
+* **Option B: Database Schema Migration to Strings (Chosen):** Change columns to nullable strings.
+
+### Chosen Solution
+Create database migration `2026_06_19_084725_change_experience_columns_to_strings_in_employee_profiles.php` that alters the `previous_year_experience`, `years_completed`, and `overall_year_experience` columns in `employee_profiles` table to `string` format.
+
+### Consequences
+* **Positive:** Safe uploader operations, zero import crashes due to experience formats, and direct preservation of original Zimyo sheet terminology.
+* **Negative:** Sorting or math operations on experience duration cannot be run at the database layer (must be parsed in memory if needed).
+* **Related Files:**
+  * `database/migrations/2026_06_19_084725_change_experience_columns_to_strings_in_employee_profiles.php` (schema refactor)
+* **Related Release:** Phase 4.3 (`v1.1-phase-4.3` completion commit `ea088c8`)
+
+---
+
 *(Subsequent ADRs documented in respective phase commits)*

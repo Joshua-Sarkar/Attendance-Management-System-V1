@@ -55,4 +55,23 @@ This document indexes all verification suites, automated test files, and asserti
 
 ---
 
+## 3. Employee Profile & Encryption Testing
+
+### Automated Test Files
+* **[EmployeeProfileTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/EmployeeProfileTest.php)**
+  * *Coverage Focus:* Validates profile relationships, lifecycle cascading, and transparent database encryption.
+  * *Scenarios Verified:*
+    1. **1:1 Bidirectional Relationships:** Verifies that a profile correctly links back to its User parent, and a User parent retrieves its profile attributes.
+    2. **Cascading Deletions:** Asserts that when a User record is deleted from the workforce database, its corresponding `employee_profiles` row is automatically purged (database cascade).
+    3. **Rest-Layer Encryption verification:** Saves sample Aadhaar, PAN, and Bank Account numbers, queries the database table directly to confirm the data is stored in encrypted ciphertext format, and checks that reading properties through model access returns decrypted plain text.
+* **[EmployeeProfileAccessTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/EmployeeProfileAccessTest.php)**
+  * *Coverage Focus:* Read boundaries and access scopes for HR profiles.
+  * *Scenarios Verified:*
+    1. Standard Employees can view their own profile tabs.
+    2. Standard Employees are blocked (403 unauthorized) from viewing other employees' profiles.
+    3. Admins can view any employee profile record.
+    4. Managers can view their direct reports' profiles but are blocked from viewing profiles of employees reporting to other managers.
+
+---
+
 *(Other domain tests detailed in respective phase commits)*
