@@ -10,13 +10,22 @@ This document decomposes the Attendance Management System Version 1 (AMS-V1) int
 To secure personnel records and operations by regulating application access based on verified identities, enforcing secure password rules, forcing immediate password updates for newly provisioned or reset accounts, and partitioning functional permissions across three clear roles (`admin`, `manager`, `employee`).
 
 ### Architecture Lineage
-* **Original Business Problem:** The organization lacked centralized access logs. Personnel details and emergency/financial records were shared over unsecured channels or Excel sheets, exposing private data to unauthorized staff.
-* **Phase Introduced:** Initial Laravel setup (Breeze base) in Phase B / database foundation.
-* **Major Evolutions:**
+* **Original Business Problem:** The organization lacked centralized access controls. Personnel details and emergency/financial records were shared over unsecured channels or Excel sheets, exposing private data to unauthorized staff.
+* **Phase Introduced:** Phase B (initial Laravel Breeze setup and layout configuration).
+* **Major Evolutions Across Releases:**
   * *Phase C.1 / Database Foundation:* Created basic role columns in database table `users`.
   * *Phase D:* Added self-referencing hierarchy keys (`manager_id`, `admin_id`) to the `users` table to restrict manager queries. Added the `must_change_password` boolean attribute.
   * *Phase E:* Built the `CheckPasswordChange` middleware interceptor, redirecting unprovisioned users to standard change-password forms.
 * **Current Implementation:** A hybrid of Laravel Breeze's default cookie-session authentication combined with the custom `CheckPasswordChange` middleware. Administrators can reset an employee's password to default, which automatically re-arms the forced update flag.
+* **Related Migrations:**
+  * [0001_01_01_000000_create_users_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/0001_01_01_000000_create_users_table.php) (initial users schema)
+  * [2026_06_10_104616_add_provisioning_columns_to_users_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_10_104616_add_provisioning_columns_to_users_table.php) (adds `must_change_password` and onboarding flags)
+  * [2026_06_11_134500_add_admin_id_to_users_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_11_134500_add_admin_id_to_users_table.php) (adds administrative audit tracking key)
+* **Related Tests:**
+  * [AuthenticationTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/Auth/AuthenticationTest.php) (standard login validation)
+  * [PasswordStrategySecurityTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/PasswordStrategySecurityTest.php) (asserts password updates and forced redirection flows)
+* **Related Decisions:**
+  * [ADR 1: Onboarding Credential Enforcement](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-1-onboarding-credential-enforcement-forced-password-reset) (forces password updates upon first-time login)
 
 ### Codebase Mappings
 * **Controllers:**
@@ -56,11 +65,18 @@ To partition the workforce into distinct business units (departments), manage pr
 
 ### Architecture Lineage
 * **Original Business Problem:** The organization lacked structured department boundaries. General staff lists were fully visible to all registered accounts, and managers could view and manage personnel records outside their teams.
-* **Phase Introduced:** Phase C.1 (CRUD directory) and Phase D (manager hierarchy scope).
-* **Major Evolutions:**
-  * *Phase C.1 (Commit `e37dd81`):* Developed the basic CRUD routes, controllers, and views for managing department models and staff records. Created default seed tables.
-  * *Phase D (Commit `14a6f80`):* Integrated self-referential reporting chains using `manager_id` on the `users` table. Modified queries in `EmployeeController.php` index action so that Managers can only view employees where `manager_id = auth()->id()`.
-* **Current Implementation:** Managers and Administrators can perform CRUD operations on employees, but Managers are restricted to employees reporting directly to them and cannot create Admin or Manager roles. Employee IDs are auto-generated sequentially under the format `EMP` + 5 digits (e.g. `EMP00001`).
+* **Phase Introduced:** Phase C.1 (department and employee CRUD directory).
+* **Major Evolutions Across Releases:**
+  * *Phase C.1:* Developed the basic CRUD routes, controllers, and views for managing department models and staff records.
+  * *Phase D:* Integrated self-referencing reporting chains using `manager_id` on the `users` table. Scoped employee listing queries in `EmployeeController.php` so that Managers can only view direct reports.
+* **Current Implementation:** Managers and Administrators can perform CRUD operations on employees. Managers are restricted to employees reporting directly to them and cannot create or promote Admin/Manager roles. Employee IDs are auto-generated sequentially under the format `EMP` + 5 digits (e.g. `EMP00001`).
+* **Related Migrations:**
+  * [2026_06_09_141744_modify_users_table_for_ams.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_09_141744_modify_users_table_for_ams.php) (adds role, status, employee_id keys)
+  * [2026_06_09_142514_create_departments_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_09_142514_create_departments_table.php) (creates departments schema)
+* **Related Tests:**
+  * [HierarchySplitTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/HierarchySplitTest.php) (checks department boundaries, reporting scopes, and manager constraints)
+* **Related Decisions:**
+  * [ADR 2: Sequential Alphanumeric Employee ID Auto-Generation](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-2-sequential-alphanumeric-employee-id-auto-generation) (auto-generates readable sequential employee IDs)
 
 ### Codebase Mappings
 * **Controllers:**
@@ -94,11 +110,20 @@ To store extended employee metadata (addresses, education, bank accounts, emerge
 
 ### Architecture Lineage
 * **Original Business Problem:** Sensitive identity identifiers (Aadhaar numbers, PAN, bank account numbers, IFSC codes) were stored in plain text, violating data protection protocols. Additionally, importing experience fields (e.g. "5 Years 2 Months") failed because database tables defined experience duration as numeric float fields.
-* **Phase Introduced:** Phase 4 (Profiles and Encrypted Fields) and Phase 4.3 (Experience format corrections).
-* **Major Evolutions:**
-  * *Phase 4 (Commit `3369d64`):* Created `employee_profiles` table to isolate non-authentication attributes in a 1:1 mapped relationship to `users`. Integrated multi-tab views and enabled model-level encryption casts.
-  * *Phase 4.3 (Commit `ea088c8`):* Altered the experience columns (`previous_year_experience`, `years_completed`, `overall_year_experience`) from decimal fields to nullable strings to allow importing of textual metrics (e.g., "5.5 Years" or text logs).
-* **Current Implementation:** Profile data is entered across organized form tabs (Personal, Contact, Address, Bank, Education, Experience). When saving, standard Eloquent model encryption casts automatically encrypt sensitive columns in SQLite/MySQL.
+* **Phase Introduced:** Phase 4 (extended profiles and encrypted fields).
+* **Major Evolutions Across Releases:**
+  * *Phase 4:* Created `employee_profiles` table to isolate extended metadata in a 1:1 mapped relationship to `users`. Integrated multi-tab views and enabled model-level encryption casts.
+  * *Phase 4.3:* Altered experience columns from decimal fields to nullable strings to prevent uploader crashes when parsing text duration formats (e.g. "3 Years 6 Months").
+* **Current Implementation:** Profile data is managed across organized tabs. Eloquent model encryption casts automatically handle AES-256 encryption at rest.
+* **Related Migrations:**
+  * [2026_06_18_093324_create_employee_profiles_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_18_093324_create_employee_profiles_table.php) (sets up profiles schema)
+  * [2026_06_19_084725_change_experience_columns_to_strings_in_employee_profiles.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_19_084725_change_experience_columns_to_strings_in_employee_profiles.php) (experience columns refactor)
+* **Related Tests:**
+  * [EmployeeProfileTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/EmployeeProfileTest.php) (verifies 1:1 relation lifecycle and database encryption casts)
+  * [EmployeeProfileAccessTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/EmployeeProfileAccessTest.php) (verifies role-based read scopes for profile records)
+* **Related Decisions:**
+  * [ADR 3: Model-Level Encryption Casts for Sensitive Identification & Financial Columns](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-3-model-level-encryption-casts-for-sensitive-identification--financial-columns)
+  * [ADR 4: Alphanumeric String Schemas for Experience Fields](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-4-alphanumeric-string-schemas-for-experience-fields)
 
 ### Codebase Mappings
 * **Controllers:**
@@ -128,14 +153,23 @@ To store extended employee metadata (addresses, education, bank accounts, emerge
 To log employee daily check-in and check-out timestamps, evaluate check-in delays against configurable start times and grace periods, bypass Sunday weekend runs, integrate active leave request status overrides, and present HR with a queryable punctuality audit center.
 
 ### Architecture Lineage
-* **Original Business Problem:** Inaccurate manual spreadsheets, lacks grace calculations, absent flags assigned to employees who were actually on authorized leave, and no unified view of late arrivals.
-* **Phase Introduced:** Phase C (Foundation), Phase E (Leave overrides), Phase 4.4 (Audit Center), and Phase 4.5 (Shift rules transition).
-* **Major Evolutions:**
-  * *Phase C (Commit `9ddd786`):* Created `attendances` schema, added check-in/out actions, set default shift time to 09:00 AM with 15-minute grace, and generated employee personal logs.
-  * *Phase E (Commit `125e72e`):* Integrated Rule B: if an employee is absent but has an approved leave request, their daily status resolves to `on_leave` or `wfh`. If they physically check in, the physical record overrides the leave.
-  * *Phase 4.4 (Commit `82fd54a`):* Built the HR Punctuality Audit Center with search, status, department, and date filters, listing late exceptions and calculating delay averages.
-  * *Phase 4.5 (Commit `b599f5a`):* Shift configurations updated to transition start times from 09:00 AM to 09:30 AM (retaining 15-minute grace) using `new_rules_start_date` flag to safeguard older records.
-* **Current Implementation:** Daily check-ins are logged in `AttendanceService.php`. The `Attendance` model dynamically calculates late arrival minutes using a custom attribute accessor that evaluates the date against `new_rules_start_date` to decide which grace threshold applies.
+* **Original Business Problem:** Inaccurate manual spreadsheets, lack of grace and late duration calculations, absent status wrongly assigned to employees on approved leave, and no global visibility of punctuality metrics.
+* **Phase Introduced:** Phase C (attendance check-in/out foundation).
+* **Major Evolutions Across Releases:**
+  * *Phase C:* Built the core check-in/out engine, using a 09:00 AM shift start with a 15-minute grace window.
+  * *Phase E:* Implemented Rule B: approved leaves automatically override absent flags, displaying as `on_leave` or `wfh` unless overwritten by a physical clock-in.
+  * *Phase 4.4:* Built the HR Punctuality Audit Center, introducing filtering, late exceptions list, and delay metrics calculation.
+  * *Phase 4.5:* Transited the shift start time from 09:00 to 09:30 using a configurable threshold date (`new_rules_start_date`) to protect historical logs from rules corruption.
+* **Current Implementation:** `Attendance` records dynamically compute delay durations using carbon tools in [Attendance.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/Attendance.php) depending on the configuration settings. HR admins query global records in the audit console.
+* **Related Migrations:**
+  * [2026_06_10_000000_create_attendances_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_10_000000_create_attendances_table.php) (establishes unique constraint on date and user)
+* **Related Tests:**
+  * [AttendanceVerificationTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/AttendanceVerificationTest.php) (check-in/out controller tests)
+  * [AttendanceMetricsTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/AttendanceMetricsTest.php) (shift grace period calculations)
+  * [AttendanceAuditTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/AttendanceAuditTest.php) (HR audit filters)
+  * [WorkingDaysTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/WorkingDaysTest.php) (Sunday weekend exclusions)
+* **Related Decisions:**
+  * [ADR 5: Configurable Historical Shift Rules Transition Strategy](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-5-configurable-historical-shift-rules-transition-strategy-0900-vs-0930-shift-start)
 
 ### Codebase Mappings
 * **Controllers:**
@@ -171,11 +205,19 @@ To allow employees to submit leave applications, route requests to designated su
 
 ### Architecture Lineage
 * **Original Business Problem:** Leaves were managed via emails and verbal agreements. Staff had to classify their own leaves (Casual, Sick, LOP), which led to incorrect ledger entries and verification bottlenecks.
-* **Phase Introduced:** Phase E (Foundation) and Phase 4.6 (nullable simplified leave types).
-* **Major Evolutions:**
-  * *Phase E (Commit `125e72e`):* Built core `leave_requests` and `leave_request_logs` tables. Added status transitions (`pending`, `approved`, `rejected`, `cancelled`). Allowed employees to choose leave types on submission.
-  * *Phase 4.6 (Commit `2385dbb`):* Simplified workflow by making the `leave_type` database column nullable. Removed dropdowns for standard employees, moving Paid/Unpaid classification strictly to the manager's approval action. Admin self-submissions remain auto-approved but require choosing paid/unpaid on create.
-* **Current Implementation:** Employees submit requests containing only dates and reasons. Managers review pending rows and select either **Approve as Paid** or **Approve as Unpaid**, or reject. The request log table audits all status changes.
+* **Phase Introduced:** Phase E (leave request schema and approvals).
+* **Major Evolutions Across Releases:**
+  * *Phase E:* Established the core request and status logs schemas, status transitions, and basic approvals routing.
+  * *Phase 4.6:* Simplified workflows by making `leave_type` nullable in the database. General employees submit requests with dates/reasons only; managers classify them as Paid or Unpaid during approval.
+* **Current Implementation:** Employees apply via simple forms, managers review and decide classifications, and admins retain override controls.
+* **Related Migrations:**
+  * [2026_06_11_153000_create_leave_requests_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_11_153000_create_leave_requests_table.php) (primary table)
+  * [2026_06_11_153500_create_leave_request_logs_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_11_153500_create_leave_request_logs_table.php) (status audit trail)
+  * [2026_06_23_184204_make_leave_type_nullable_in_leave_requests_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_23_184204_make_leave_type_nullable_in_leave_requests_table.php) (nullability refactor)
+* **Related Tests:**
+  * [LeaveManagementTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/LeaveManagementTest.php) (validates request scopes, overrides, overlaps, and cancellations)
+* **Related Decisions:**
+  * [ADR 6: Simplified Nullable Leave Requests](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-6-simplified-nullable-leave-requests-leave-type-nullability)
 
 ### Codebase Mappings
 * **Controllers:**
@@ -206,11 +248,18 @@ To allow employees to submit leave applications, route requests to designated su
 To manage employee leave balance accounts under a transaction audit model, utilize database concurrency locks to prevent race conditions during rapid reviews, and credit monthly balances using automated console tasks.
 
 ### Architecture Lineage
-* **Original Business Problem:** User leave balances were updated directly without change logs. Double-clicking approval buttons rapidly caused database race conditions, resulting in duplicate deductions and negative balances.
-* **Phase Introduced:** Phase 4.5 (Leave Balance Ledger & Concurrency).
-* **Major Evolutions:**
-  * *Phase 4.5 (Commit `b599f5a`):* Replaced direct model updates with a double-entry ledger system using the `leave_ledger_entries` table. Configured pessimistic locking (`lockForUpdate()`) and database transactions (`DB::transaction()`) during approvals, cancellations, and overrides. Built commands to backfill opening balances and execute monthly accruals.
-* **Current Implementation:** Balance alterations (deductions, refunds, accruals, adjustments) are transactionally written to the ledger database. Approvals retrieve user rows using pessimistic locks to block concurrent writes.
+* **Original Business Problem:** User leave balances were updated directly without audit logs. Double-clicking approval buttons rapidly caused database race conditions, resulting in duplicate deductions and negative balances.
+* **Phase Introduced:** Phase 4.5 (leave balance ledger and concurrency locks).
+* **Major Evolutions Across Releases:**
+  * *Phase 4.5:* Replaced direct `users.leave_balance` modifications with a double-entry database transaction ledger. Created monthly accrual and backfill console commands. Configured database-level pessimistic locking (`lockForUpdate`).
+* **Current Implementation:** User balance adjustments require writing a matching log entry to the `leave_ledger_entries` table inside database transactions, with query rows locked to serialize concurrent requests.
+* **Related Migrations:**
+  * [2026_06_23_000000_add_leave_balance_and_ledger_tables.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_23_000000_add_leave_balance_and_ledger_tables.php) (adds balance column and creates entries table)
+* **Related Tests:**
+  * [LeaveBalanceTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/LeaveBalanceTest.php) (asserts balance adjustments, command accruals, cancellations, overrides, and concurrency bounds)
+* **Related Decisions:**
+  * [ADR 7: Double-Entry Ledger Ledger for Leave Balances](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-7-double-entry-ledger-ledger-for-leave-balances)
+  * [ADR 8: Pessimistic Row Locking for Leave Balance Modifications](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-8-pessimistic-row-locking-lockforupdate-for-leave-balance-modifications)
 
 ### Codebase Mappings
 * **Controllers:**
@@ -238,12 +287,18 @@ To manage employee leave balance accounts under a transaction audit model, utili
 To execute bulk migrations of workforce directories from external platform exports (specifically Zimyo spreadsheets), auto-create missing departments, map supervisor hierarchies without order-of-insertion limitations, configure opening leave balances, and record processing logs.
 
 ### Architecture Lineage
-* **Original Business Problem:** Migrating personnel lists from external providers took hours. Attempting to link reporting managers failed in a standard single-pass import script because supervisors were often defined on rows further down the sheet, meaning their User accounts did not exist yet.
-* **Phase Introduced:** Phase 4.1 (Zimyo Migration Engine) and Phase 4 (Uploader logs).
-* **Major Evolutions:**
-  * *Phase 4.1 (Commit `d88009b`):* Created `EmployeeImportService.php` with a two-pass parser. Pass 1 imports users, profiles, and initial ledger credits. Pass 2 runs manager-employee hierarchical linking using in-memory ID maps.
-  * *Phase 4 (Commit `3369d64`):* Integrated uploader error reporting by storing run statistics and warning listings in the `import_logs` table.
-* **Current Implementation:** Excel spreadsheets are uploaded by Admins and parsed via `PhpSpreadsheet`. The service processes the sheets inside a database transaction, standardizing ID strings, validating statuses, and logging warning JSON payloads.
+* **Original Business Problem:** Migrating personnel lists from external providers manually was slow and prone to errors. Single-pass scripts failed to link manager relationships when a subordinate's row preceded their supervisor's row in the Excel sheet.
+* **Phase Introduced:** Phase 4.1 (two-pass Zimyo Excel migration engine).
+* **Major Evolutions Across Releases:**
+  * *Phase 4.1:* Developed `EmployeeImportService.php` utilizing a two-pass parsing pattern. Pass 1 creates users and profiles. Pass 2 resolves and links the manager relationships.
+  * *Phase 4:* Added uploader execution tracking and JSON warnings parsing in the `import_logs` table.
+* **Current Implementation:** Administrators post spreadsheets via the import panel. The engine parses data, enforces ID formatting (e.g. `EMP00024`), logs warn logs, and initializes balances.
+* **Related Migrations:**
+  * [2026_06_18_193234_create_import_logs_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_18_193234_create_import_logs_table.php) (logs table)
+* **Related Tests:**
+  * [ImportEmployeesTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/ImportEmployeesTest.php) (validates parsing, manager resolution loops, and error logging)
+* **Related Decisions:**
+  * [ADR 9: Two-Pass Manager Resolution on Bulk Imports](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-9-two-pass-manager-resolution-on-bulk-imports)
 
 ### Codebase Mappings
 * **Controllers:**
@@ -271,12 +326,18 @@ To execute bulk migrations of workforce directories from external platform expor
 To allow employees to submit correction requests for incorrect profile details, provide HR Admins with an interactive review queue to resolve discrepancies, and notify Admins of pending items using active count badges.
 
 ### Architecture Lineage
-* **Original Business Problem:** Employees could not correct errors in their profiles (such as bank details or typos). HR had to manually alter databases or receive updates via chat, leaving no auditable trail.
-* **Phase Introduced:** Phase 4.2 (Corrections form) and Phase 4.6 (Sidebar notification badge).
-* **Major Evolutions:**
-  * *Phase 4.2 (Commit `05df1a8`):* Created `profile_correction_requests` schema and validation controls. Created the Admin review dashboard queue and resolution endpoints.
-  * *Phase 4.6 (Commit `2385dbb`):* Added a red notification badge in the sidebar navigation layout (`sidebar.blade.php`) showing the live query count of pending requests to alert Administrators.
+* **Original Business Problem:** Employees could not correct errors in their profiles directly without posing data security risks. HR had to modify records manually based on chat messages, leaving no audit trail.
+* **Phase Introduced:** Phase 4.2 (employee profile correction form and admin review queue).
+* **Major Evolutions Across Releases:**
+  * *Phase 4.2:* Created the request queues schema, employee request form inputs, and the HR resolution console dashboard.
+  * *Phase 4.6:* Integrated a real-time red notification badge counter on the sidebar panel menu layout to alert HR admins to pending items.
 * **Current Implementation:** Employees submit a text request pointing to a specific profile attribute. HR Admins view the queue, apply corrections to the employee profile, and mark requests as resolved.
+* **Related Migrations:**
+  * [2026_06_19_090000_create_profile_correction_requests_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_19_090000_create_profile_correction_requests_table.php) (requests schema)
+* **Related Tests:**
+  * [ProfileCorrectionRequestTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/ProfileCorrectionRequestTest.php) (asserts uploader role access, duplicate blocks, queue lists, and resolution actions)
+* **Related Decisions:**
+  * [ADR 10: Profile Correction Requests instead of Direct Profile Editing](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-10-profile-correction-requests-instead-of-direct-profile-editing)
 
 ### Codebase Mappings
 * **Controllers:**
@@ -304,9 +365,20 @@ To allow employees to submit correction requests for incorrect profile details, 
 To ensure secure, predictable, and fully recoverable application releases to Hostinger Linux Shared environments, maintain local developer workspace parity via SQLite configurations, run timezone tests, and document the git branch strategy.
 
 ### Architecture Lineage
-* **Original Business Problem:** Assets compilation were excluded from git, resulting in uncompiled styles in production. Rollback commands were run blindly, posing database resets and data loss risks. Topic branches diverged from the main deployment branch due to a lack of branch definitions.
-* **Phase Introduced:** Initial Laravel setup (Vite compilation), Phase 4.5 (MySQL cPanel backup snapshots), and Phase 4.7 (Git branch taxonomy and tags verification).
+* **Original Business Problem:** Missing compiled CSS/JS assets in production due to build exclusions. DB operations were executed without snapshot safety, posing database corruption and data loss risks. Inconsistent branching taxonomies caused topic branches to drift.
+* **Phase Introduced:** Initial setup (repository foundation, Vite assets compiler, environment baseline).
+* **Major Evolutions Across Releases:**
+  * *Initial Setup:* Created master configuration folders and timezone definitions.
+  * *Phase 4.5:* Standardized Hostinger cPanel deployment playbooks and daily automated MySQL snapshot scripts.
+  * *Phase 4.7:* Verified local tags and mapped branching strategies to clean up git logs.
 * **Current Implementation:** Deployments are run via SSH commands on Hostinger cPanel. Local environments compile assets using Vite and run unit tests against SQLite in-memory databases. Production uses a MySQL 8.0 transaction database engine. Timezones are locked to `Asia/Kolkata` (IST).
+* **Related Migrations:**
+  * All 14 system database migrations (governed by CLI `migrate --force` during deployment)
+* **Related Tests:**
+  * [TimezoneTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/TimezoneTest.php) (validates configuration timezone equals `Asia/Kolkata`)
+* **Related Decisions:**
+  * [ADR 11: Database Parity Strategy (SQLite for Testing vs MySQL in Production)](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-11-database-parity-strategy-sqlite-for-testing-vs-mysql-in-production)
+  * [ADR 12: Standard Git Branch Strategy (Taxonomy & Mappings)](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-12-standard-git-branch-strategy-taxonomy--mappings)
 
 ### Codebase Mappings
 * **Configurations:**
