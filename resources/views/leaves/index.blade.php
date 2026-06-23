@@ -116,7 +116,7 @@
                                             {{ $req->start_date->format('M d, Y') }} - {{ $req->end_date->format('M d, Y') }}
                                         </td>
                                         <td class="py-3 px-4 text-vellum capitalize">
-                                            {{ str_replace('_', ' ', $req->leave_type) }}
+                                            {{ $req->leave_type ? str_replace('_', ' ', $req->leave_type) : 'Pending Classification' }}
                                         </td>
                                         <td class="py-3 px-4 text-center text-vellum font-semibold">
                                             {{ $req->total_days }}
@@ -193,7 +193,7 @@
                                             <div class="text-xs text-vellum-faint font-mono">{{ $request->user->employee_id }} ({{ ucfirst($request->user->role) }})</div>
                                         </td>
                                         <td class="py-3 px-4 font-medium text-vellum capitalize">
-                                            {{ str_replace('_', ' ', $request->leave_type) }}
+                                            {{ $request->leave_type ? str_replace('_', ' ', $request->leave_type) : 'Pending Classification' }}
                                         </td>
                                         <td class="py-3 px-4 text-vellum-muted">
                                             {{ $request->start_date->format('M d, Y') }} - {{ $request->end_date->format('M d, Y') }}
@@ -256,7 +256,7 @@
                                             <div class="text-xs text-vellum-faint font-mono">{{ $request->user->employee_id }}</div>
                                         </td>
                                         <td class="py-3 px-4 capitalize text-vellum">
-                                            {{ str_replace('_', ' ', $request->leave_type) }}
+                                            {{ $request->leave_type ? str_replace('_', ' ', $request->leave_type) : 'Pending Classification' }}
                                         </td>
                                         <td class="py-3 px-4 text-vellum-muted">
                                             {{ $request->start_date->format('M d, Y') }} - {{ $request->end_date->format('M d, Y') }}
