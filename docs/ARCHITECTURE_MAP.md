@@ -126,4 +126,12 @@ graph TD
 
 ---
 
+### Deployment & Infrastructure Operations Relationships
+* **Deployment & Operations → All Subsystems (Database Migrations):**
+  * Deployed migrations structure the schema tables, constraints, foreign keys, and indexes for all subsystems (Authentication, Profiles, Attendance, Ledger, Corrections, and Imports).
+* **Deployment & Operations → Authentication & Security:**
+  * Setting correct `.env` files mapping (e.g. `APP_ENV=production`, `APP_DEBUG=false`, and setting secure `APP_KEY` secrets) locks database encryption casts in the Profiles domain.
+
+---
+
 *(Subsystem relationships for other domains will be detailed in respective phase commits)*

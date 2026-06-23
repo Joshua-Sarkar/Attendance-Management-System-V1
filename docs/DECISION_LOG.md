@@ -277,4 +277,54 @@ Create the `profile_correction_requests` table. Employees submit requests specif
 
 ---
 
+## ADR 11: Database Parity Strategy (SQLite for Testing vs MySQL in Production)
+
+### Problem
+Executing unit and feature tests against physical MySQL databases is slow, requires local database installations on the developer's computer, and risks corrupting local seed databases during test suite execution.
+
+### Context
+We want tests to execute in seconds. However, the production server on Hostinger runs MySQL 8.0. We must ensure that SQL queries written for the application compile and function correctly across both database engines.
+
+### Alternatives Considered
+* **Option A: MySQL Docker containers locally:** Run tests against a local MySQL docker container.
+  * *Trade-off:* Hostinger shared hosting environments do not support Docker. Setting up local Docker databases increases onboarding complexity for future developers.
+* **Option B: Local SQLite with Production MySQL (Chosen):** Use Laravel's database abstraction layer to support SQLite for development runs and MySQL in production.
+
+### Chosen Solution
+Configure `phpunit.xml` to override database configurations to use SQLite (`DB_CONNECTION=sqlite`) and in-memory storage (`DB_DATABASE=:memory:`). Maintain strict standard Eloquent query syntax, avoiding raw MySQL dialec specific scripts.
+
+### Consequences
+* **Positive:** Fast test execution (e.g. 98 tests pass in ~30 seconds), zero dependency on local MySQL services, easy setups.
+* **Negative:** MySQL specific database features (such as raw locks `lockForUpdate()`) are silently ignored or behave slightly differently under SQLite. Concurrency tests mock these actions or rely on database transaction assertions to verify safety.
+* **Related Files:**
+  * `phpunit.xml` (test configurations overrides)
+  * `.env.example` (environment default templates)
+* **Related Release:** Initial Laravel setup (`d8fcc07`)
+
+---
+
+## ADR 12: Standard Git Branch Strategy (Taxonomy & Mappings)
+
+### Problem
+Topic and feature branches (e.g., `ui-redesign`, `phase-d-leave-management`) diverged from `main` production lines during early development stages, making codebase history difficult to navigate.
+
+### Context
+We need a unified branching strategy that identifies legacy branches, isolates current release lines, and enforces standard hotfix/release playbooks going forward.
+
+### Alternatives Considered
+* **Option A: GitFlow:** Maintain strict `master`, `develop`, `feature/*`, `release/*`, `hotfix/*` structures.
+  * *Trade-off:* Too complex for a small corporate system in early active phases.
+* **Option B: Trunk-Based Development with Topic Documentation (Chosen):** Execute updates directly on `main` or merge topic branches quickly, while maintaining a clear taxonomy of historical branches.
+
+### Chosen Solution
+Define `main` as the single source of truth and deployment branch. Document legacy branches (`develop`, `master`, `ui-layout`, `ui-redesign`) as read-only historical branches, and require all future patches to branch from `main` using the prefix `hotfix/`.
+
+### Consequences
+* **Positive:** Simple release logic, clean linear git history, and transparent branch maps.
+* **Related Files:**
+  * [VERSIONING.md](file:///c:/Users/Lenovo/AMS-V1/docs/VERSIONING.md) (standards documentation)
+* **Related Release:** Phase 4.7 (`v1.2-docs-baseline` tag)
+
+---
+
 *(Subsequent ADRs documented in respective phase commits)*

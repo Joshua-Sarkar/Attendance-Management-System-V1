@@ -299,4 +299,37 @@ To allow employees to submit correction requests for incorrect profile details, 
 ---
 
 ## 9. Deployment & Infrastructure Operations
-*(Reconciled in operations phase)*
+
+### Business Purpose
+To ensure secure, predictable, and fully recoverable application releases to Hostinger Linux Shared environments, maintain local developer workspace parity via SQLite configurations, run timezone tests, and document the git branch strategy.
+
+### Architecture Lineage
+* **Original Business Problem:** Assets compilation were excluded from git, resulting in uncompiled styles in production. Rollback commands were run blindly, posing database resets and data loss risks. Topic branches diverged from the main deployment branch due to a lack of branch definitions.
+* **Phase Introduced:** Initial Laravel setup (Vite compilation), Phase 4.5 (MySQL cPanel backup snapshots), and Phase 4.7 (Git branch taxonomy and tags verification).
+* **Current Implementation:** Deployments are run via SSH commands on Hostinger cPanel. Local environments compile assets using Vite and run unit tests against SQLite in-memory databases. Production uses a MySQL 8.0 transaction database engine. Timezones are locked to `Asia/Kolkata` (IST).
+
+### Codebase Mappings
+* **Configurations:**
+  * `vite.config.js` / `tailwind.config.js` (asset compilation)
+  * `config/app.php` (timezone locked to `Asia/Kolkata`)
+* **Routes:**
+  * Health check route `/up` (Laravel default)
+* **Migrations:**
+  * All 16 database migrations (executed via standard CLI: `php artisan migrate --force`)
+* **Feature Tests:**
+  * [TimezoneTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/TimezoneTest.php) (confirms active timezone returns `Asia/Kolkata` to prevent clock ticket timezone mismatches)
+* **Release Introduced:** `v1.2-docs-foundation` (ops baseline)
+* **Current Operational Status:** Fully operational. Daily MySQL snapshots are configured in cPanel. Rollback playbooks are detailed in `DEPLOYMENT.md`.
+
+---
+
+## Git Branch Strategy & Taxonomy
+
+AMS-V1 uses a structured branch taxonomy to keep development history traceable:
+1. **`main` (Active / Production):** The source of truth for all deployed features. Deployed directly to Hostinger production. All release and docs tags point here.
+2. **`develop` (Legacy Development):** Used during early phase C/D/E integrations. Now kept as a historical record.
+3. **`master` (Legacy Production):** Legacy production branch replaced by `main`.
+4. **`phase-d-leave-management` (Topic / Phase Branch):** Historical branch used to write early leave request models.
+5. **`ui-layout` / `ui-redesign` (Topic / Feature Branches):** Specialized branches used to test dashboard stylesheets and glassmorphic designs.
+6. **`hotfix/[module]-[short-desc]` (Operational / Hotfix):** Created directly from `main` to patch production bugs. Merged back to `main` with annotated tag updates.
+

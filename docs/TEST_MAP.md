@@ -163,4 +163,14 @@ This document indexes all verification suites, automated test files, and asserti
 
 ---
 
+## 9. Deployment & Infrastructure Operations Testing
+
+### Automated Test Files
+* **[TimezoneTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/TimezoneTest.php)**
+  * *Coverage Focus:* Confirms active environment timezone settings match corporate requirements.
+  * *Scenarios Verified:*
+    1. **Asia/Kolkata Locking:** Asserts that the application's configuration timezone maps strictly to `Asia/Kolkata` (IST - UTC+05:30) to prevent date offsets or incorrect delays math on production environments.
+
+---
+
 *(Other domain tests detailed in respective phase commits)*

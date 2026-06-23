@@ -248,5 +248,14 @@ These fields are encrypted using Laravel's standard AES-256-CBC encryption ciphe
 
 ---
 
-## 4. Other Subsystem Tables
-*(Detailed in respective domain commits)*
+## 5. Database Engine Parity
+AMS-V1 maintains database engine parity between development, testing, and production environments:
+
+* **Local/Testing Environment (SQLite):**
+  * Configured in `.env` or `phpunit.xml` as `DB_CONNECTION=sqlite`.
+  * Runs tests in-memory (`DB_DATABASE=:memory:`) to speed up execution.
+  * SQLite does not enforce foreign keys by default, but Laravel's test setup configures foreign key checks during migration commands.
+* **Production Environment (MySQL 8.0):**
+  * Configured on Hostinger Linux Shared servers.
+  * Enforces transactional safety, foreign key cascades, unique indices, and supports optimistic/pessimistic row locking (`lockForUpdate()`).
+  * Migrations are executed with `--force` flags to update production tables without user prompts.
