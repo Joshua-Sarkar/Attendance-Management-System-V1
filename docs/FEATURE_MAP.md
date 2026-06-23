@@ -233,7 +233,35 @@ To manage employee leave balance accounts under a transaction audit model, utili
 ---
 
 ## 7. Zimyo Excel Import Engine
-*(Reconciled in imports phase)*
+
+### Business Purpose
+To execute bulk migrations of workforce directories from external platform exports (specifically Zimyo spreadsheets), auto-create missing departments, map supervisor hierarchies without order-of-insertion limitations, configure opening leave balances, and record processing logs.
+
+### Architecture Lineage
+* **Original Business Problem:** Migrating personnel lists from external providers took hours. Attempting to link reporting managers failed in a standard single-pass import script because supervisors were often defined on rows further down the sheet, meaning their User accounts did not exist yet.
+* **Phase Introduced:** Phase 4.1 (Zimyo Migration Engine) and Phase 4 (Uploader logs).
+* **Major Evolutions:**
+  * *Phase 4.1 (Commit `d88009b`):* Created `EmployeeImportService.php` with a two-pass parser. Pass 1 imports users, profiles, and initial ledger credits. Pass 2 runs manager-employee hierarchical linking using in-memory ID maps.
+  * *Phase 4 (Commit `3369d64`):* Integrated uploader error reporting by storing run statistics and warning listings in the `import_logs` table.
+* **Current Implementation:** Excel spreadsheets are uploaded by Admins and parsed via `PhpSpreadsheet`. The service processes the sheets inside a database transaction, standardizing ID strings, validating statuses, and logging warning JSON payloads.
+
+### Codebase Mappings
+* **Controllers:**
+  * [ImportController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/ImportController.php) (manages file upload posts and displays status summaries)
+* **Models:**
+  * [ImportLog.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/ImportLog.php) (logs processing stats and warnings)
+* **Services:**
+  * [EmployeeImportService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/EmployeeImportService.php) (two-pass Excel uploader logic)
+* **Routes:**
+  * `admin.import.show` / `admin.import.handle` (admin restricted)
+* **Views:**
+  * `resources/views/admin/import-employees.blade.php`
+* **Migrations:**
+  * `2026_06_18_193234_create_import_logs_table.php` (import logs)
+* **Feature Tests:**
+  * [ImportEmployeesTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/ImportEmployeesTest.php) (asserts uploader role access, formats validation, manager mappings, and error logging)
+* **Release Introduced:** `v1.1-phase-4.1`
+* **Current Operational Status:** Fully operational. Standardizes employee IDs using prefix formatting (e.g. converts raw values like `"10"` or `"EMP10"` to sequential `"EMP00010"`).
 
 ---
 

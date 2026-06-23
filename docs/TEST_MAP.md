@@ -137,4 +137,17 @@ This document indexes all verification suites, automated test files, and asserti
 
 ---
 
+## 7. Zimyo Excel Import Engine Testing
+
+### Automated Test Files
+* **[ImportEmployeesTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/ImportEmployeesTest.php)**
+  * *Coverage Focus:* Validates uploader role authorization, file parsing accuracy, mapping chains resolution, and warning summaries logic.
+  * *Scenarios Verified:*
+    1. **Uploader Authorization:** Confirms HR Admins can access uploader view and trigger sheet processing posts, while general Managers/Employees are blocked (403 unauthorized).
+    2. **Roster Creation & Profile updates:** Parses a mock xlsx file containing employee details and asserts that User accounts and profiles are successfully registered with matching parameters.
+    3. **Two-Pass Hierarchy validation:** Verifies that employee records are correctly mapped to their reporting manager's user primary key in Pass 2, even if the manager is created after the subordinate during file parsing.
+    4. **Warning Summaries Logging:** Processes rows with missing email addresses, invalid employee statuses, or unmapped departments, verifying that the uploader skips the target rows, records warnings, and logs JSON outputs to the `import_logs` table.
+
+---
+
 *(Other domain tests detailed in respective phase commits)*

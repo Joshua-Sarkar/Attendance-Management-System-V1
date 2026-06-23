@@ -108,4 +108,14 @@ graph TD
 
 ---
 
+### Zimyo Excel Import Engine Relationships
+* **Zimyo Import Engine → Workforce Management & Profiles:**
+  * Bulk sheet parsing creates new User rows and `employee_profiles` rows under a shared database transaction block. Missing departments are identified and created on the fly.
+* **Zimyo Import Engine → Authentication & Security:**
+  * Newly created users are assigned a hashed version of the system default password (`DEFAULT_EMPLOYEE_PASSWORD`) and flagged with `must_change_password = true`, forcing them into the security update workflow on first login.
+* **Zimyo Import Engine → Leave Balance Ledger:**
+  * Every created employee has their initial 2.00 leave credit initialized by a direct invocation of the ledger initialization services, recording an `opening_balance` entry.
+
+---
+
 *(Subsystem relationships for other domains will be detailed in respective phase commits)*

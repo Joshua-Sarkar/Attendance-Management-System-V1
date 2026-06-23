@@ -48,11 +48,30 @@ erDiagram
     leave_request_logs }o--|| users : "action_taken_by user_id"
     leave_ledger_entries }o--|| users : "updates_balance_of user_id"
     leave_ledger_entries }o--o| leave_requests : "references_request leave_request_id"
+    import_logs }o--|| users : "executed_by run_by_user_id"
 ```
 
 ---
 
 ## 2. Table Definitions
+
+### Table: `import_logs`
+Logs bulk data migration sheet executions, recording processing statistics and JSON validation errors.
+
+* **Columns:**
+  * `id` (`bigint unsigned`, Primary Key, Auto Increment): Unique identifier.
+  * `filename` (`varchar(255)`): Name of the Excel spreadsheet file processed.
+  * `run_by_user_id` (`bigint unsigned`, Nullable, Foreign Key -> `users.id`): Administrator executing the run.
+  * `rows_processed` (`int`): Total records processed.
+  * `created_count` (`int`): Newly provisioned staff count.
+  * `updated_count` (`int`): Updated employee profiles count.
+  * `error_count` (`int`): Number of skipped rows containing warnings.
+  * `errors` (`json`, Nullable): Detailed warning array matching row indices to failure descriptions (e.g. invalid status, missing headers).
+  * `created_at` / `updated_at` (`timestamp`): Database timestamps.
+
+* **Indexes & Keys:**
+  * `PRIMARY KEY (id)`
+  * `FOREIGN KEY import_logs_run_by_user_id_foreign (run_by_user_id) REFERENCES users(id) ON DELETE SET NULL`
 
 ### Table: `leave_ledger_entries`
 Stores transactional, double-entry adjustment records tracking employee leave balance changes.

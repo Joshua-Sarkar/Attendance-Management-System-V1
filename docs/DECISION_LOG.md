@@ -221,4 +221,33 @@ Wrap the approval, cancellation, and override controller logic in a database tra
 
 ---
 
+## ADR 9: Two-Pass Manager Resolution on Bulk Imports
+
+### Problem
+When bulk-importing employee directories from external spreadsheets, managers and employees are parsed row-by-row. If an employee row lists a manager whose User record has not yet been created (because their row is further down the Excel sheet), linking the `manager_id` foreign key fails, causing import crashes or missing reporting structures.
+
+### Context
+We want to allow excel files to be uploaded in any order, without forcing administrators to sort worksheets so that supervisors are always listed above subordinates.
+
+### Alternatives Considered
+* **Option A: Roster sorting requirements:** Enforce HR staff to sort excel sheets prior to upload.
+  * *Trade-off:* High user friction; manual sorting is prone to error and layout failures.
+* **Option B: Staging Table buffer:** Load imports into temporary database tables, then map hierarchies via cron queries.
+  * *Trade-off:* High codebase bloat, introduces database queue overhead, and slows down immediate admin feedback.
+* **Option C: In-Memory Two-Pass Import parsing (Chosen):** Process uploader operations in two distinct loops inside a single database transaction.
+
+### Chosen Solution
+Implement the uploader script in two distinct passes:
+1. **Pass 1:** Create or update all standard User records and `employee_profiles` rows (bypassing `manager_id` assignments). Build an in-memory lookup map of numeric employee codes to database user primary keys.
+2. **Pass 2:** Re-scan the rows, extract manager codes (e.g. from parenthesized text strings like `John Doe (24)`), resolve supervisor database IDs from the in-memory map, and save the `manager_id` foreign keys.
+
+### Consequences
+* **Positive:** Complete order independence. Excel files are imported successfully regardless of row arrangements. All updates are wrapped in a single database transaction, rolling back everything if a critical parser failure occurs.
+* **Negative:** Slightly increased memory consumption to hold in-memory user IDs maps during large uploader runs (e.g. thousands of rows). Since imports are rare and rosters are under 1000 employees, memory limits are not hit.
+* **Related Files:**
+  * [EmployeeImportService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/EmployeeImportService.php) (importer service loops)
+* **Related Release:** Phase 4.1 (`v1.1-phase-4.1` completion commit `d88009b`)
+
+---
+
 *(Subsequent ADRs documented in respective phase commits)*
