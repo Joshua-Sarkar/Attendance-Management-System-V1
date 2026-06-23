@@ -250,4 +250,31 @@ Implement the uploader script in two distinct passes:
 
 ---
 
+## ADR 10: Profile Correction Requests instead of Direct Profile Editing
+
+### Problem
+Allowing employees to edit their own profile fields directly introduces data verification vulnerabilities. For example, an employee could change their bank account details or designation without any HR review, which could cause payroll errors or fraud.
+
+### Context
+We want employees to be able to request updates to their profiles, but we must route all changes through an administrative review gate before they are committed to the database.
+
+### Alternatives Considered
+* **Option A: Direct Edit with Admin Notifications:** Allow employees to edit their fields directly, but send email alerts to HR.
+  * *Trade-off:* High vulnerability. The unverified data is already live, forcing HR to run manual rollbacks if a change is invalid.
+* **Option B: Pending Profile Staging Columns:** Add duplicate nullable staging columns for every attribute on `employee_profiles` (e.g. `pending_bank_name`).
+  * *Trade-off:* High schema bloat and redundant columns.
+* **Option C: Correction Requests Table (Chosen):** Create a separate request transaction table routing all suggestions through an Admin queue.
+
+### Chosen Solution
+Create the `profile_correction_requests` table. Employees submit requests specifying the target field and the proposed new value. Admins inspect the queue, copy the verified changes to the employee profile, and mark requests as resolved.
+
+### Consequences
+* **Positive:** Complete security gate. Sensitive profile parameters can never be changed without explicit Admin approval. The request log preserves a permanent audit trail of who resolved each correction request.
+* **Related Files:**
+  * [ProfileCorrectionRequestController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/ProfileCorrectionRequestController.php) (routes submissions and reviews)
+  * [ProfileCorrectionRequest.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/ProfileCorrectionRequest.php) (request model)
+* **Related Release:** Phase 4.2 (`v1.1-phase-4.2` completion commit `05df1a8`)
+
+---
+
 *(Subsequent ADRs documented in respective phase commits)*

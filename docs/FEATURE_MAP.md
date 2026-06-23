@@ -266,7 +266,35 @@ To execute bulk migrations of workforce directories from external platform expor
 ---
 
 ## 8. Profile Correction Requests
-*(Reconciled in corrections phase)*
+
+### Business Purpose
+To allow employees to submit correction requests for incorrect profile details, provide HR Admins with an interactive review queue to resolve discrepancies, and notify Admins of pending items using active count badges.
+
+### Architecture Lineage
+* **Original Business Problem:** Employees could not correct errors in their profiles (such as bank details or typos). HR had to manually alter databases or receive updates via chat, leaving no auditable trail.
+* **Phase Introduced:** Phase 4.2 (Corrections form) and Phase 4.6 (Sidebar notification badge).
+* **Major Evolutions:**
+  * *Phase 4.2 (Commit `05df1a8`):* Created `profile_correction_requests` schema and validation controls. Created the Admin review dashboard queue and resolution endpoints.
+  * *Phase 4.6 (Commit `2385dbb`):* Added a red notification badge in the sidebar navigation layout (`sidebar.blade.php`) showing the live query count of pending requests to alert Administrators.
+* **Current Implementation:** Employees submit a text request pointing to a specific profile attribute. HR Admins view the queue, apply corrections to the employee profile, and mark requests as resolved.
+
+### Codebase Mappings
+* **Controllers:**
+  * [ProfileCorrectionRequestController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/ProfileCorrectionRequestController.php) (handles employee store actions and admin resolve actions)
+* **Models:**
+  * [ProfileCorrectionRequest.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/ProfileCorrectionRequest.php) (pending / resolved status mapping)
+* **Routes:**
+  * `employee.corrections.store` (employee submit)
+  * `admin.corrections.index` / `admin.corrections.resolve` (admin queues)
+* **Views:**
+  * `resources/views/admin/correction-requests/index.blade.php` (HR list panel)
+  * [sidebar.blade.php](file:///c:/Users/Lenovo/AMS-V1/resources/views/components/sidebar.blade.php) (implements the badge alert indicator)
+* **Migrations:**
+  * `2026_06_19_090000_create_profile_correction_requests_table.php`
+* **Feature Tests:**
+  * [ProfileCorrectionRequestTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/ProfileCorrectionRequestTest.php) (asserts employee store limits, duplicate submission blocks, admin index visibility, and resolution tracking)
+* **Release Introduced:** `v1.1-phase-4.2`
+* **Current Operational Status:** Fully operational. Employees are blocked from submitting a new request if a pending request already exists for them (duplicate submission prevention).
 
 ---
 

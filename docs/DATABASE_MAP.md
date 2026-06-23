@@ -49,11 +49,32 @@ erDiagram
     leave_ledger_entries }o--|| users : "updates_balance_of user_id"
     leave_ledger_entries }o--o| leave_requests : "references_request leave_request_id"
     import_logs }o--|| users : "executed_by run_by_user_id"
+    profile_correction_requests }o--|| users : "requested_by user_id"
+    profile_correction_requests }o--o| users : "resolved_by resolved_by"
 ```
 
 ---
 
 ## 2. Table Definitions
+
+### Table: `profile_correction_requests`
+Stores employee profile edit requests, allowing HR to inspect and resolve details.
+
+* **Columns:**
+  * `id` (`bigint unsigned`, Primary Key, Auto Increment): Unique identifier.
+  * `user_id` (`bigint unsigned`, Foreign Key -> `users.id`): Submitting employee.
+  * `field` (`varchar(255)`): Profile database column identifier requested for change (e.g. `bank_name`).
+  * `message` (`text`): Employee description and correction coordinates.
+  * `status` (`varchar(255)`, Default: `'pending'`): Request status state (`pending`, `resolved`).
+  * `admin_note` (`text`, Nullable): Resolution notes typed by Administrator.
+  * `resolved_by` (`bigint unsigned`, Nullable, Foreign Key -> `users.id`): HR Administrator executing resolution.
+  * `resolved_at` (`timestamp`, Nullable): Resolution timestamp.
+  * `created_at` / `updated_at` (`timestamp`): Database timestamps.
+
+* **Indexes & Keys:**
+  * `PRIMARY KEY (id)`
+  * `FOREIGN KEY profile_correction_requests_user_id_foreign (user_id) REFERENCES users(id) ON DELETE CASCADE`
+  * `FOREIGN KEY profile_correction_requests_resolved_by_foreign (resolved_by) REFERENCES users(id) ON DELETE SET NULL`
 
 ### Table: `import_logs`
 Logs bulk data migration sheet executions, recording processing statistics and JSON validation errors.

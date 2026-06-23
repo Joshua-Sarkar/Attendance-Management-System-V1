@@ -118,4 +118,12 @@ graph TD
 
 ---
 
+### Profile Correction Requests Relationships
+* **Profile Corrections → Workforce Management (HR Admin Resolution):**
+  * Correction requests do not edit profiles directly. Instead, when an Admin resolves a request, the Admin copies the validated values to the target [EmployeeProfile](file:///c:/Users/Lenovo/AMS-V1/app/Models/EmployeeProfile.php) or [User](file:///c:/Users/Lenovo/AMS-V1/app/Models/User.php) record and marks the request as resolved.
+* **Profile Corrections → User Interface (Badge Alert Counters):**
+  * The left sidebar layout file query matches the count of pending correction requests and displays a red badge count alert for logged-in HR Administrators, providing live feedback.
+
+---
+
 *(Subsystem relationships for other domains will be detailed in respective phase commits)*

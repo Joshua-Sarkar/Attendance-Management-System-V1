@@ -150,4 +150,17 @@ This document indexes all verification suites, automated test files, and asserti
 
 ---
 
+## 8. Profile Correction Requests Testing
+
+### Automated Test Files
+* **[ProfileCorrectionRequestTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/ProfileCorrectionRequestTest.php)**
+  * *Coverage Focus:* Validates employee request submissions, duplicate blocks, queue visibility, and resolution updates.
+  * *Scenarios Verified:*
+    1. **Employee Submission:** Confirms that standard employees can submit correction requests specifying fields (e.g. `bank_name`).
+    2. **Duplicate submission guard:** Blocks employees from submitting a new request if they already have an active request in `pending` state.
+    3. **Admin Queue Visibility:** Verifies HR Admins can view the central index of requests, while standard employees are blocked (403 unauthorized).
+    4. **Resolution audits:** Checks that Admins can resolve pending requests, which sets the `resolved_by` and `resolved_at` columns, and updates request status to `resolved`.
+
+---
+
 *(Other domain tests detailed in respective phase commits)*
