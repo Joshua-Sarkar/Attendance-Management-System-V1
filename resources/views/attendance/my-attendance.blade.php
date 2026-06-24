@@ -92,7 +92,7 @@
                                             @if ($today_attendance->check_in_time)
                                                 {{ $today_attendance->check_in_time->format('h:i A') }}
                                             @else
-                                                <span class="text-burgundy">Not checked in</span>
+                                                <span class="text-burgundy-light font-mono text-sm">Not checked in</span>
                                             @endif
                                         </p>
                                     </div>
@@ -144,13 +144,13 @@
                             @endif
                             
                             @if ($is_checked_in && !$is_checked_out)
-                                <form method="POST" action="{{ route('attendance.check-out') }}" class="flex-1">
-                                    @csrf
-                                    <button type="submit" class="w-full bg-burgundy hover:bg-burgundy/90 text-canvas font-semibold py-3 px-6 rounded-lg transition duration-200 shadow-md">
-                                        ✓ Check Out
-                                    </button>
-                                </form>
-                            @endif
+                                                <form method="POST" action="{{ route('attendance.check-out') }}" class="flex-1">
+                                                    @csrf
+                                                    <button type="submit" class="w-full bg-burgundy hover:bg-burgundy/90 text-vellum font-semibold py-3 px-6 rounded-lg transition duration-200 shadow-md border border-burgundy/20">
+                                                        ✓ Check Out
+                                                    </button>
+                                                </form>
+                                            @endif
                             
                             @if ($is_checked_in && $is_checked_out)
                                 <div class="flex-1 bg-surface-raised text-vellum-muted font-semibold py-3 px-6 rounded-lg text-center border border-hairline">
@@ -171,31 +171,31 @@
                     <!-- Present Days -->
                     <div class="stat-card success">
                         <div class="stat-label">Days Present</div>
-                        <div class="stat-value text-forest">{{ $stats['present'] }}</div>
+                        <div class="stat-value text-forest-light">{{ $stats['present'] }}</div>
                     </div>
 
                     <!-- Late Days -->
                     <div class="stat-card warn">
                         <div class="stat-label">Days Late</div>
-                        <div class="stat-value text-brass">{{ $stats['late'] }}</div>
+                        <div class="stat-value text-cognac-light">{{ $stats['late'] }}</div>
                     </div>
 
                     <!-- Absent Days -->
                     <div class="stat-card danger">
                         <div class="stat-label">Days Absent</div>
-                        <div class="stat-value text-burgundy">{{ $stats['absent'] }}</div>
+                        <div class="stat-value text-burgundy-light">{{ $stats['absent'] }}</div>
                     </div>
 
                     <!-- On Leave Days -->
                     <div class="stat-card info">
                         <div class="stat-label">On Leave</div>
-                        <div class="stat-value text-slate">{{ $stats['on_leave'] ?? 0 }}</div>
+                        <div class="stat-value text-slate-light">{{ $stats['on_leave'] ?? 0 }}</div>
                     </div>
 
                     <!-- WFH Days -->
                     <div class="stat-card success">
                         <div class="stat-label">WFH Days</div>
-                        <div class="stat-value text-forest">{{ $stats['wfh'] ?? 0 }}</div>
+                        <div class="stat-value text-forest-light">{{ $stats['wfh'] ?? 0 }}</div>
                     </div>
 
                     <!-- Total Hours Worked -->
@@ -222,13 +222,13 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead>
-                            <tr class="border-b border-hairline text-vellum-muted font-semibold">
-                                <th class="py-3 px-4">Date</th>
-                                <th class="py-3 px-4">Day of Week</th>
-                                <th class="py-3 px-4">Check In</th>
-                                <th class="py-3 px-4">Check Out</th>
-                                <th class="py-3 px-4">Hours Worked</th>
-                                <th class="py-3 px-4">Status</th>
+                            <tr class="bg-surface-raised/55 border-b border-hairline uppercase text-[11px] tracking-wider text-vellum-muted font-semibold">
+                                <th class="py-3.5 px-5 text-left">Date</th>
+                                <th class="py-3.5 px-5 text-left">Day of Week</th>
+                                <th class="py-3.5 px-5 text-left">Check In</th>
+                                <th class="py-3.5 px-5 text-left">Check Out</th>
+                                <th class="py-3.5 px-5 text-right">Hours Worked</th>
+                                <th class="py-3.5 px-5 text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -236,26 +236,26 @@
                                 @php
                                     $status = $day['status'];
                                 @endphp
-                                <tr class="border-b border-hairline/50 hover:bg-brass/[0.06] transition duration-150 @if($day['is_weekend']) opacity-60 bg-surface-raised/40 @endif">
-                                    <td class="py-3 px-4 text-vellum font-medium">
+                                <tr class="border-b border-hairline/50 hover:bg-brass/[0.04] transition duration-150 @if($day['is_weekend']) opacity-60 bg-surface-raised/40 @endif">
+                                    <td class="py-3.5 px-5 text-left text-vellum font-medium font-mono">
                                         {{ $day['date']->format('M d, Y') }}
                                         @if($day['date']->isToday())
                                             <span class="ml-2 bg-brass/20 text-brass text-[10px] uppercase font-bold px-1.5 py-0.5 rounded">Today</span>
                                         @endif
                                     </td>
-                                    <td class="py-3 px-4 {{ $day['is_weekend'] && $day['day_of_week'] === 'Sunday' ? 'text-vellum-faint' : 'text-vellum' }}">
+                                    <td class="py-3.5 px-5 text-left {{ $day['is_weekend'] && $day['day_of_week'] === 'Sunday' ? 'text-vellum-faint' : 'text-vellum' }}">
                                         {{ $day['day_of_week'] }}
                                     </td>
-                                    <td class="py-3 px-4 text-vellum">
+                                    <td class="py-3.5 px-5 text-left text-vellum font-mono">
                                         {{ $day['check_in'] ? $day['check_in']->format('h:i A') : '-' }}
                                     </td>
-                                    <td class="py-3 px-4 text-vellum">
+                                    <td class="py-3.5 px-5 text-left text-vellum font-mono">
                                         {{ $day['check_out'] ? $day['check_out']->format('h:i A') : '-' }}
                                     </td>
-                                    <td class="py-3 px-4 text-vellum">
+                                    <td class="py-3.5 px-5 text-right text-vellum font-mono font-semibold">
                                         {{ $day['hours'] ? number_format($day['hours'], 1) . 'h' : '-' }}
                                     </td>
-                                    <td class="py-3 px-4">
+                                    <td class="py-3.5 px-5 text-center">
                                         <span class="tag @if($status === 'present') present @elseif($status === 'late') late @elseif($status === 'on_leave') leave @elseif($status === 'wfh') wfh @elseif($status === 'weekend') weekend @else absent @endif">
                                             {{ str_replace('_', ' ', $status) }}
                                         </span>

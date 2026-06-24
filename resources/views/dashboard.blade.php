@@ -118,7 +118,7 @@
                 <!-- Late Today -->
                 <div class="stat-card warn">
                     <div class="stat-label">Late Arrivals Today</div>
-                    <div class="stat-value">{{ $stats['late'] }}</div>
+                    <div class="stat-value text-cognac-light">{{ $stats['late'] }}</div>
                     <div class="stat-foot">average {{ $stats['average_late_minutes'] }} minutes past grace</div>
                 </div>
 
@@ -139,7 +139,7 @@
                 <!-- Absent Today -->
                 <div class="stat-card danger">
                     <div class="stat-label">Absent, unverified</div>
-                    <div class="stat-value">{{ $stats['absent'] }}</div>
+                    <div class="stat-value text-burgundy-light">{{ $stats['absent'] }}</div>
                     <div class="stat-foot flag">no check-in, no leave on file</div>
                 </div>
             </div>
@@ -208,13 +208,7 @@
                                     {{ $desc }}
                                 </div>
                             </div>
-                            <span class="tag {{ $status }} text-[10.5px] tracking-[0.6px] uppercase px-2.5 py-0.5 rounded-full font-medium shrink-0
-                                @if($status === 'present') bg-forest-bg text-forest
-                                @elseif($status === 'late') bg-brass/[0.13] text-brass
-                                @elseif($status === 'on_leave') bg-slate-bg text-slate
-                                @elseif($status === 'wfh') bg-forest-bg text-forest
-                                @elseif($status === 'weekend') text-vellum-faint border border-hairline
-                                @else bg-burgundy-bg text-burgundy @endif">
+                            <span class="tag {{ $status }}">
                                 @if($status === 'on_leave') On Leave @elseif($status === 'weekend') Weekend @else {{ str_replace('_', ' ', $status) }} @endif
                             </span>
                         </div>
