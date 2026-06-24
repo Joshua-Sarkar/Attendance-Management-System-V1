@@ -53,7 +53,7 @@ This document serves as the primary entry point for developers, maintainers, aud
 
 ### 2. Workforce Management
 * **Purpose:** Manages department structures and creates, edits, or deletes employee listings.
-* **Current Status:** Operational. Auto-generates unique Employee IDs.
+* **Current Status:** Operational. Auto-generates unique Employee IDs. Index directories are fully aligned with Phase 4.7.3 contrast and vertical padding standards.
 * **Primary Files:**
   * [EmployeeController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/EmployeeController.php)
   * [DepartmentController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/DepartmentController.php)
@@ -95,14 +95,14 @@ This document serves as the primary entry point for developers, maintainers, aud
 
 ### 8. Employee Import Engine
 * **Purpose:** Parses Zimyo Excel exports, registers missing departments, maps hierarchies in two passes, and initializes opening balances.
-* **Current Status:** Operational.
+* **Current Status:** Operational. Renders import metrics, log listings, and warnings in style compliance with Phase 4.7.3.
 * **Primary Files:**
   * [EmployeeImportService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/EmployeeImportService.php)
   * [ImportController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/ImportController.php)
 
 ### 9. Profile Correction Requests
 * **Purpose:** Allows employees to submit profile corrections, notifying Admins via a sidebar count badge.
-* **Current Status:** Operational.
+* **Current Status:** Operational. Renders request log tables using high-contrast text and desaturated tag styles.
 * **Primary Files:**
   * [ProfileCorrectionRequestController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/ProfileCorrectionRequestController.php)
   * [sidebar.blade.php](file:///c:/Users/Lenovo/AMS-V1/resources/views/components/sidebar.blade.php) (badge element)

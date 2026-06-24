@@ -12,7 +12,7 @@
         <div class="w-full space-y-6">
 
             @if(session('success'))
-                <div class="rounded-md bg-forest-bg border border-hairline text-forest px-4 py-3 text-sm">
+                <div class="rounded-md bg-forest-bg border border-hairline text-forest-light px-4 py-3 text-sm">
                     {{ session('success') }}
                 </div>
             @endif
@@ -26,20 +26,20 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead>
-                            <tr class="border-b border-hairline text-vellum-muted font-semibold">
-                                <th class="py-3 px-4">Employee Details</th>
-                                <th class="py-3 px-4">Field Being Corrected</th>
-                                <th class="py-3 px-4">Request Message</th>
-                                <th class="py-3 px-4 text-center">Status</th>
-                                <th class="py-3 px-4">Submitted Date</th>
-                                <th class="py-3 px-4">Resolution Note / Action</th>
+                            <tr class="bg-surface-raised/55 border-b border-hairline uppercase text-[11px] tracking-wider text-vellum-muted font-semibold">
+                                <th class="py-3.5 px-5 text-left">Employee Details</th>
+                                <th class="py-3.5 px-5 text-left">Field Being Corrected</th>
+                                <th class="py-3.5 px-5 text-left">Request Message</th>
+                                <th class="py-3.5 px-5 text-center">Status</th>
+                                <th class="py-3.5 px-5 text-left">Submitted Date</th>
+                                <th class="py-3.5 px-5 text-left">Resolution Note / Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($requests as $req)
-                                <tr class="border-b border-hairline/50 hover:bg-brass/[0.06] transition duration-150">
+                                <tr class="border-b border-hairline/50 hover:bg-brass/[0.04] transition duration-150">
                                     <!-- Employee Details -->
-                                    <td class="py-4 px-4 align-top">
+                                    <td class="py-3.5 px-5 align-top">
                                         <div class="font-semibold text-vellum">
                                             <a href="{{ route('employees.show', $req->requester) }}" class="text-brass hover:underline">
                                                 {{ $req->requester->name }}
@@ -54,19 +54,19 @@
                                     </td>
 
                                     <!-- Field -->
-                                    <td class="py-4 px-4 align-top">
+                                    <td class="py-3.5 px-5 align-top">
                                         <span class="tag leave">
                                             {{ $req->field }}
                                         </span>
                                     </td>
 
                                     <!-- Message -->
-                                    <td class="py-4 px-4 align-top max-w-xs whitespace-pre-line text-vellum-muted">
+                                    <td class="py-3.5 px-5 align-top max-w-xs whitespace-pre-line text-vellum-muted">
                                         {{ $req->message }}
                                     </td>
 
                                     <!-- Status -->
-                                    <td class="py-4 px-4 align-top text-center">
+                                    <td class="py-3.5 px-5 align-top text-center">
                                         @if($req->status === 'pending')
                                             <span class="tag late">Pending</span>
                                         @else
@@ -75,12 +75,12 @@
                                     </td>
 
                                     <!-- Submitted Date -->
-                                    <td class="py-4 px-4 align-top text-vellum-faint font-mono">
+                                    <td class="py-3.5 px-5 align-top text-vellum-faint font-mono">
                                         {{ $req->created_at->format('Y-m-d h:i A') }}
                                     </td>
 
                                     <!-- Resolution / Form -->
-                                    <td class="py-4 px-4 align-top">
+                                    <td class="py-3.5 px-5 align-top">
                                         @if($req->status === 'pending')
                                             <form method="POST" action="{{ route('admin.corrections.resolve', $req) }}" class="space-y-2">
                                                 @csrf

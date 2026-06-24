@@ -54,52 +54,52 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead>
-                            <tr class="border-b border-hairline text-vellum-muted font-semibold">
-                                <th class="py-3 px-4">Employee ID</th>
-                                <th class="py-3 px-4">Name</th>
-                                <th class="py-3 px-4">Email</th>
-                                <th class="py-3 px-4">Role</th>
-                                <th class="py-3 px-4">Status</th>
-                                <th class="py-3 px-4">Department</th>
-                                <th class="py-3 px-4">Assigned Manager</th>
-                                <th class="py-3 px-4">Assigned Admin</th>
-                                <th class="py-3 px-4">Leave Balance</th>
-                                <th class="py-3 px-4 text-right">Actions</th>
+                            <tr class="bg-surface-raised/55 border-b border-hairline uppercase text-[11px] tracking-wider text-vellum-muted font-semibold">
+                                <th class="py-3.5 px-5 text-left">Employee ID</th>
+                                <th class="py-3.5 px-5 text-left">Name</th>
+                                <th class="py-3.5 px-5 text-left">Email</th>
+                                <th class="py-3.5 px-5 text-left">Role</th>
+                                <th class="py-3.5 px-5 text-center">Status</th>
+                                <th class="py-3.5 px-5 text-left">Department</th>
+                                <th class="py-3.5 px-5 text-left">Assigned Manager</th>
+                                <th class="py-3.5 px-5 text-left">Assigned Admin</th>
+                                <th class="py-3.5 px-5 text-right">Leave Balance</th>
+                                <th class="py-3.5 px-5 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($employees as $employee)
-                                <tr class="border-b border-hairline/50 hover:bg-brass/[0.06] transition duration-150">
-                                    <td class="py-3 px-4 font-mono font-medium text-brass">
+                                <tr class="border-b border-hairline/50 hover:bg-brass/[0.04] transition duration-150">
+                                    <td class="py-3.5 px-5 text-left font-mono font-medium text-brass">
                                         {{ $employee->employee_id ?? 'N/A' }}
                                     </td>
-                                    <td class="py-3 px-4 text-vellum font-medium">
+                                    <td class="py-3.5 px-5 text-left text-vellum font-medium">
                                         {{ $employee->name }}
                                     </td>
-                                    <td class="py-3 px-4 text-vellum select-all">
+                                    <td class="py-3.5 px-5 text-left text-vellum select-all">
                                         {{ $employee->email }}
                                     </td>
-                                    <td class="py-3 px-4 capitalize text-vellum-muted">
+                                    <td class="py-3.5 px-5 text-left capitalize text-vellum-muted">
                                         {{ $employee->role }}
                                     </td>
-                                    <td class="py-3 px-4">
+                                    <td class="py-3.5 px-5 text-center">
                                         <span class="tag {{ $employee->status === 'active' ? 'present' : 'absent' }}">
                                             {{ $employee->status }}
                                         </span>
                                     </td>
-                                    <td class="py-3 px-4 text-vellum-muted">
+                                    <td class="py-3.5 px-5 text-left text-vellum-muted">
                                         {{ $employee->department?->name ?? 'N/A' }}
                                     </td>
-                                    <td class="py-3 px-4 text-vellum-muted">
+                                    <td class="py-3.5 px-5 text-left text-vellum-muted">
                                         {{ $employee->manager?->name ?? 'N/A' }}
                                     </td>
-                                    <td class="py-3 px-4 text-vellum-muted">
+                                    <td class="py-3.5 px-5 text-left text-vellum-muted">
                                         {{ $employee->admin?->name ?? 'N/A' }}
                                     </td>
-                                    <td class="py-3 px-4 text-vellum-muted font-mono">
+                                    <td class="py-3.5 px-5 text-right text-vellum-muted font-mono">
                                         {{ $employee->role !== 'admin' ? number_format($employee->leave_balance, 2) : 'N/A' }}
                                     </td>
-                                    <td class="py-3 px-4 text-right">
+                                    <td class="py-3.5 px-5 text-right">
                                         <div class="flex items-center justify-end gap-2">
                                             <a href="{{ route('employees.show', $employee) }}"
                                                class="px-2.5 py-1 bg-brass hover:bg-brass/90 text-canvas font-semibold rounded text-xs transition">
@@ -118,7 +118,7 @@
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit"
-                                                        class="px-2.5 py-1 bg-burgundy-bg hover:bg-burgundy text-burgundy hover:text-vellum border border-burgundy/30 rounded text-xs transition">
+                                                        class="px-2.5 py-1 bg-burgundy-bg hover:bg-burgundy text-burgundy-light hover:text-vellum border border-burgundy-light/20 rounded text-xs transition">
                                                     Delete
                                                 </button>
                                             </form>
