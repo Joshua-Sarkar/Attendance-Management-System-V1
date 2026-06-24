@@ -23,6 +23,7 @@ The table below maps the development timeline, indicating completion commits, in
 | 11 | **Phase 4.5** | `b599f5a` | None | `v1.1-phase-4.5` | **Leave Balance Ledger & Concurrency:** Created transactional double-entry ledger audits, console accrual tools, and pessimistic row locking (`lockForUpdate`). |
 | 12 | **Phase 4.6** | `2385dbb` | `3d517c9`, `918ad86` (Patch) | `v1.2-phase-4.6` | **Leave Workflow Simplification:** Made `leave_type` nullable on create. Removed dropdowns for employees and moved Paid/Unpaid selection to approval. Added sidebar badge counters. *(Note: Tag `v1.2-phase-4.6` already exists in repository).* |
 | 13 | **Phase 4.7** | `e00d32b` | None | `v1.2-docs-baseline` | **Architecture Traceability & Consolidation:** Conducted retrospective architecture audit, verified and created all missing historical tags, established Feature/Database/Test maps and ADR Decision Logs. |
+| 14 | **Phase 4.7.2** | `70cd6cc` | None | `v1.2-phase-4.7.2` | **Leave Authorization System:** Implemented reusable leave credits database schema and engine, planned/unplanned leave categories, birthday leave credits sync & auto-approvals, dynamic attendance status resolution (on_leave/absent) as sole source of truth for payroll impact, and tests. |
 
 ---
 
@@ -73,6 +74,9 @@ git tag -a v1.1-phase-4.5 b599f5a -m "Phase 4.5 complete - Leave ledger balances
 
 # Phase 4.7 (Architecture Traceability & Consolidation)
 git tag -a v1.2-docs-baseline -m "Phase 4.7 complete - Retrospective architecture audit and documentation consolidation baseline"
+
+# Phase 4.7.2 (Leave Authorization System & Credits Engine)
+git tag -a v1.2-phase-4.7.2 70cd6cc -m "Phase 4.7.2 complete - Reusable leave credits engine, planned/unplanned categories, birthday leave credits sync, and approval-driven attendance resolution"
 ```
 
 ---
