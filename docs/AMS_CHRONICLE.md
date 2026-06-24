@@ -441,6 +441,29 @@ The evolution of the AMS-V1 project is structured into sequential development ph
 * **Database Changes:** Created the `leave_credits` table (columns: `id`, `user_id`, `amount`, `used_amount`, `source_identifier`, `status`, `expires_at`, `granted_by`, `timestamps`). Added `leave_credit_id` (FK to `leave_credits.id`, nullable) to `leave_requests` table.
 * **Testing Performed:** Created a full suite of feature tests in `LeaveAuthorizationModelTest.php` and updated legacy tests to remove Paid/Unpaid paths, ensuring 100% test coverage with 102 passing tests (546 assertions).
 
+### Phase 4.7.3 — Readability & Usability Pass
+* **Business Problem:** User screens suffered from readability and accessibility issues (WCAG failures due to low-contrast tags), inconsistent padding/hover details, and light-mode layout overrides from default Laravel Breeze templates.
+* **Features Implemented:** Harmonized vertical table padding to py-3.5 px-5 and row hovers to hover:bg-brass/[0.04] transitions. Standardized status badge styling using the desaturated tag component styles (present, absent, late, leave). Converted white cards to panel wrappers and dark controls in employee creation and profile editing layout templates. Resolved confirmation modal buttons contrast.
+* **Files Introduced/Modified:**
+  * `resources/css/app.css` [MODIFY]
+  * `tailwind.config.js` [MODIFY]
+  * `resources/views/leaves/create.blade.php` [MODIFY]
+  * `resources/views/leaves/show.blade.php` [MODIFY]
+  * `resources/views/leaves/index.blade.php` [MODIFY]
+  * `resources/views/attendance/history.blade.php` [MODIFY]
+  * `resources/views/attendance/my-attendance.blade.php` [MODIFY]
+  * `resources/views/dashboard.blade.php` [MODIFY]
+  * `resources/views/employees/create.blade.php` [MODIFY]
+  * `resources/views/employees/index.blade.php` [MODIFY]
+  * `resources/views/profile/edit.blade.php` [MODIFY]
+  * `resources/views/profile/partials/delete-user-form.blade.php` [MODIFY]
+  * `resources/views/profile/partials/update-password-form.blade.php` [MODIFY]
+  * `resources/views/profile/partials/update-profile-information-form.blade.php` [MODIFY]
+  * `resources/views/admin/import-employees.blade.php` [MODIFY]
+  * `resources/views/admin/correction-requests/index.blade.php` [MODIFY]
+* **Database Changes:** None.
+* **Testing Performed:** Executed Pest test suite to ensure zero markup regressions (102 tests passed, 546 assertions).
+
 ---
 
 ## 5. Database Evolution History
@@ -934,3 +957,4 @@ Tracks allocated special leave credits.
 13. **Phase 4.6:** Simplified leave requests, moved leave type selection to the approval stage, added sidebar notification badges, and resolved view warnings.
 14. **Phase 4.7:** Conducted retrospective architecture audit, established Feature Map, Database Map, Test Map, Decision Log, and Architecture Map, and registered historical git tags locally, consolidating the documentation baseline under tag `v1.2-docs-baseline`.
 15. **Phase 4.7.2:** Implemented reusable leave credits database schema and dynamic birthday credits synchronizer, planned/unplanned leave types approval flow, and dynamic on_leave/absent attendance status resolution.
+16. **Phase 4.7.3:** Executed user readability and usability pass, standardized row sizes and desaturated badge colors, skin-styled Breeze forms to dark-theme panel components, and resolved button contrasts.
