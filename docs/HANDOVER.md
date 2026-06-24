@@ -19,11 +19,11 @@ This document serves as the primary entry point for developers, maintainers, aud
 
 ## 2. Current Snapshot
 
-* **Current Version:** `v1.2-phase-4.6`
-* **Latest Release Tag:** `v1.2-phase-4.6` (pointing to commit `2385dbb`)
+* **Current Version:** `v1.2-phase-4.7.2`
+* **Latest Release Tag:** `v1.2-phase-4.7.2`
 * **Documentation Baseline Tag:** `v1.2-docs-baseline` (pointing to Phase 4.7 consolidation commit)
 * **Current Branch:** `main`
-* **Latest Commit:** `Phase 4.7 Architecture Traceability baseline`
+* **Latest Commit:** `feat(leave): implement reusable leave credit database schema and dynamic birthday credits sync`
 * **Production URL:** Hostinger production directory root (cPanel mappings active)
 * **Production Database:** MySQL 8.0
 * **Current Deployment Environment:** Linux Shared Web Server (Hostinger PHP 8.2 runtime)
@@ -161,16 +161,16 @@ Currently, there are no known critical issues. The application has 100% test cov
 
 ## 8. Current Development Phase
 
-* **Active Phase:** Phase 4.6 (completed).
-* **Last Completed Phase:** Phase 4.6 (Leave workflow simplification, nullable types, and correction request count badges).
-* **Next Planned Phase:** **Phase 5 — Payroll Integration** (mapping check-in entries, delays, and unpaid leaves to monthly pay slips).
+* **Active Phase:** Phase 4.7.2 (completed).
+* **Last Completed Phase:** Phase 4.7.2 (Leave authorization system, reusable credits engine, planned/unplanned categories, birthday leave credits sync/expire, approval-driven attendance resolution).
+* **Next Planned Phase:** **Phase 4.7.3 — Readability & Accessibility Pass** (global contrast, typography improvements, and CSS updates).
 
 ---
 
 ## 9. Immediate Next Priorities
 
-1. **Phase 5 (Payroll Module):** Create calculation algorithms to determine unpaid hours based on check-in logs and unpaid leaves, mapping outputs into downloadable payslips.
-2. **Phase 6 (Mobile Checks & Geofencing):** Add mobile check-in capabilities restricted by office coordinates.
+1. **Phase 4.7.3 (Readability Pass):** Perform global contrast, typography, and styling enhancements to build visual excellence across all user-facing views.
+2. **Phase 5 (Payroll Module):** Create calculation algorithms to determine unpaid hours based on check-in logs and unpaid leaves, mapping outputs into downloadable payslips (Deferred).
 
 ---
 

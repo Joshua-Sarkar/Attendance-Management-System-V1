@@ -6,6 +6,7 @@ use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
 use App\Models\User;
 use App\Models\LeaveLedgerEntry;
+use App\Models\LeaveCredit;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,9 @@ class LeaveRequestController extends Controller
     public function index(): View
     {
         $user = Auth::user();
+
+        // Dynamically sync birthday credits
+        $user->syncBirthdayCredits();
 
         // Own leaves history
         $myLeaves = LeaveRequest::where('user_id', $user->id)
@@ -38,12 +42,9 @@ class LeaveRequestController extends Controller
             ->get();
 
         $stats = [
-            'casual_leave' => $myApprovedLeaves->where('leave_type', 'casual_leave')->sum('total_days'),
-            'sick_leave' => $myApprovedLeaves->where('leave_type', 'sick_leave')->sum('total_days'),
-            'paid_leave' => $myApprovedLeaves->where('leave_type', 'paid_leave')->sum('total_days'),
-            'unpaid_leave' => $myApprovedLeaves->where('leave_type', 'unpaid_leave')->sum('total_days'),
-            'work_from_home' => $myApprovedLeaves->where('leave_type', 'work_from_home')->sum('total_days'),
-            'emergency_leave' => $myApprovedLeaves->where('leave_type', 'emergency_leave')->sum('total_days'),
+            'planned' => $myApprovedLeaves->where('leave_type', 'planned')->sum('total_days'),
+            'unplanned' => $myApprovedLeaves->where('leave_type', 'unplanned')->sum('total_days'),
+            'complimentary' => $myApprovedLeaves->where('leave_type', 'complimentary')->sum('total_days'),
             'total_approved' => $myApprovedLeaves->sum('total_days'),
         ];
 
@@ -90,7 +91,10 @@ class LeaveRequestController extends Controller
      */
     public function create(): View
     {
-        return view('leaves.create');
+        $user = Auth::user();
+        $user->syncBirthdayCredits();
+        $hasBirthdayCredit = !empty($user->getAvailableBirthdayYears());
+        return view('leaves.create', compact('hasBirthdayCredit'));
     }
 
     /**
@@ -104,17 +108,18 @@ class LeaveRequestController extends Controller
             'start_date' => 'required|date|after_or_equal:today',
             'end_date' => 'required|date|after_or_equal:start_date',
             'reason' => 'required|string|min:5',
+            'leave_type' => 'required|string|in:planned,unplanned,complimentary',
         ];
-
-        if ($user->role === 'admin') {
-            $rules['leave_type'] = 'required|string|in:paid_leave,unpaid_leave';
-        }
 
         $validated = $request->validate($rules);
 
-        $startDate = Carbon::parse($validated['start_date']);
-        $endDate = Carbon::parse($validated['end_date']);
-        $totalDays = $startDate->diffInDays($endDate) + 1;
+        $startDate = Carbon::parse($validated['start_date'])->startOfDay();
+        $endDate = Carbon::parse($validated['end_date'])->startOfDay();
+        $totalDays = (int) $startDate->diffInDays($endDate) + 1;
+
+        if ($validated['leave_type'] === 'complimentary' && $totalDays !== 1) {
+            return back()->withErrors(['end_date' => 'Birthday Leave must be exactly 1 day.'])->withInput();
+        }
 
         // Overlap Validation
         $overlap = LeaveRequest::where('user_id', $user->id)
@@ -127,17 +132,78 @@ class LeaveRequestController extends Controller
             return back()->withErrors(['start_date' => 'You already have a pending or approved leave request that overlaps with this date range.'])->withInput();
         }
 
-        // Determine status based on approval hierarchy
+        // Handle Complimentary / Birthday Leave (Auto-approved for everyone)
+        if ($validated['leave_type'] === 'complimentary') {
+            $available = $user->getAvailableBirthdayYears($startDate);
+            if (empty($available)) {
+                return back()->withErrors(['leave_type' => 'Birthday Leave credit is not available or locked for this date.'])->withInput();
+            }
+            $selectedCredit = $available[0];
+
+            try {
+                $leaveRequest = DB::transaction(function () use ($user, $validated, $startDate, $endDate, $selectedCredit) {
+                    $lockedUser = User::where('id', $user->id)->lockForUpdate()->first();
+                    $credit = LeaveCredit::where('id', $selectedCredit['credit_id'])->lockForUpdate()->first();
+
+                    if ($credit->status !== 'active' || $credit->used_amount >= $credit->amount) {
+                        throw new \Exception("Birthday Leave credit has already been consumed or is inactive.");
+                    }
+
+                    // Consume the credit
+                    $credit->used_amount = $credit->amount;
+                    $credit->save();
+
+                    $request = LeaveRequest::create([
+                        'user_id' => $lockedUser->id,
+                        'leave_type' => 'complimentary',
+                        'leave_credit_id' => $credit->id,
+                        'start_date' => $startDate,
+                        'end_date' => $endDate,
+                        'total_days' => 1,
+                        'reason' => $validated['reason'],
+                        'status' => 'approved',
+                        'approver_id' => null,
+                        'approved_at' => now(),
+                        'notes' => 'Automatically approved Birthday Leave.',
+                    ]);
+
+                    LeaveRequestLog::create([
+                        'leave_request_id' => $request->id,
+                        'from_status' => null,
+                        'to_status' => 'pending',
+                        'action' => 'applied',
+                        'notes' => 'Applied for Birthday Leave.',
+                        'user_id' => $lockedUser->id,
+                    ]);
+
+                    LeaveRequestLog::create([
+                        'leave_request_id' => $request->id,
+                        'from_status' => 'pending',
+                        'to_status' => 'approved',
+                        'action' => 'approved',
+                        'notes' => 'System automatically approved Birthday Leave.',
+                        'user_id' => $lockedUser->id,
+                    ]);
+
+                    return $request;
+                });
+            } catch (\Exception $e) {
+                return back()->withErrors(['leave_type' => $e->getMessage()])->withInput();
+            }
+
+            return redirect()->route('leaves.index')->with('success', 'Birthday Leave submitted and automatically approved.');
+        }
+
+        // Determine status based on approval hierarchy (Admins auto-approved for Planned/Unplanned)
         if ($user->role === 'admin') {
-            $isDeductible = ($validated['leave_type'] === 'paid_leave');
-            if ($isDeductible && $user->leave_balance < $totalDays) {
+            if ($user->leave_balance < $totalDays) {
                 return back()->withErrors(['start_date' => "Insufficient leave balance. You have {$user->leave_balance} days available, but requested {$totalDays} days."])->withInput();
             }
 
             try {
-                $leaveRequest = DB::transaction(function () use ($user, $validated, $startDate, $endDate, $totalDays, $isDeductible) {
+                $leaveRequest = DB::transaction(function () use ($user, $validated, $startDate, $endDate, $totalDays) {
                     $lockedUser = User::where('id', $user->id)->lockForUpdate()->first();
-                    if ($isDeductible && $lockedUser->leave_balance < $totalDays) {
+                    if ($lockedUser->leave_balance < $totalDays) {
                         throw new \Exception("Insufficient leave balance.");
                     }
 
@@ -154,18 +220,16 @@ class LeaveRequestController extends Controller
                         'notes' => 'Auto-approved for Admin user.',
                     ]);
 
-                    if ($isDeductible) {
-                        $lockedUser->leave_balance -= $totalDays;
-                        $lockedUser->save();
+                    $lockedUser->leave_balance -= $totalDays;
+                    $lockedUser->save();
 
-                        LeaveLedgerEntry::create([
-                            'user_id' => $lockedUser->id,
-                            'leave_request_id' => $request->id,
-                            'amount' => -$totalDays,
-                            'type' => 'deduction',
-                            'description' => 'Leave approved: Paid Leave',
-                        ]);
-                    }
+                    LeaveLedgerEntry::create([
+                        'user_id' => $lockedUser->id,
+                        'leave_request_id' => $request->id,
+                        'amount' => -$totalDays,
+                        'type' => 'deduction',
+                        'description' => 'Leave approved: ' . ucfirst($validated['leave_type']) . ' Leave',
+                    ]);
 
                     // Double log to maintain full audit trail
                     LeaveRequestLog::create([
@@ -198,7 +262,7 @@ class LeaveRequestController extends Controller
         // Managers and Employees start as pending
         $leaveRequest = LeaveRequest::create([
             'user_id' => $user->id,
-            'leave_type' => null,
+            'leave_type' => $validated['leave_type'],
             'start_date' => $startDate,
             'end_date' => $endDate,
             'total_days' => $totalDays,
@@ -261,10 +325,8 @@ class LeaveRequestController extends Controller
             return back()->with('error', 'Only pending or approved requests can be cancelled.');
         }
 
-        $isDeductible = !in_array($leaveRequest->leave_type, ['unpaid_leave', 'work_from_home']);
-
         try {
-            DB::transaction(function () use ($leaveRequest, $user, $isDeductible) {
+            DB::transaction(function () use ($leaveRequest, $user) {
                 $lockedRequest = LeaveRequest::where('id', $leaveRequest->id)->lockForUpdate()->first();
                 if (!in_array($lockedRequest->status, ['pending', 'approved'])) {
                     throw new \Exception('Only pending or approved requests can be cancelled.');
@@ -276,19 +338,30 @@ class LeaveRequestController extends Controller
                     'status' => 'cancelled',
                 ]);
 
-                if ($oldStatus === 'approved' && $isDeductible) {
-                    // Refund leave balance
-                    $lockedUser = User::where('id', $user->id)->lockForUpdate()->first();
-                    $lockedUser->leave_balance += $lockedRequest->total_days;
-                    $lockedUser->save();
+                if ($oldStatus === 'approved') {
+                    if ($lockedRequest->leave_type === 'complimentary') {
+                        // Restore birthday leave credit
+                        $credit = $lockedRequest->leaveCredit;
+                        if ($credit) {
+                            $lockedCredit = LeaveCredit::where('id', $credit->id)->lockForUpdate()->first();
+                            $lockedCredit->used_amount = 0.00;
+                            $lockedCredit->save();
+                        }
+                        $lockedRequest->update(['leave_credit_id' => null]);
+                    } else {
+                        // Refund regular leave balance
+                        $lockedUser = User::where('id', $user->id)->lockForUpdate()->first();
+                        $lockedUser->leave_balance += $lockedRequest->total_days;
+                        $lockedUser->save();
 
-                    LeaveLedgerEntry::create([
-                        'user_id' => $lockedUser->id,
-                        'leave_request_id' => $lockedRequest->id,
-                        'amount' => $lockedRequest->total_days,
-                        'type' => 'refund',
-                        'description' => 'Refund for cancelled leave: ' . ucfirst(str_replace('_', ' ', $lockedRequest->leave_type)),
-                    ]);
+                        LeaveLedgerEntry::create([
+                            'user_id' => $lockedUser->id,
+                            'leave_request_id' => $lockedRequest->id,
+                            'amount' => $lockedRequest->total_days,
+                            'type' => 'refund',
+                            'description' => 'Refund for cancelled leave: ' . ucfirst($lockedRequest->leave_type) . ' Leave',
+                        ]);
+                    }
                 }
 
                 LeaveRequestLog::create([
@@ -337,23 +410,19 @@ class LeaveRequestController extends Controller
             }
         }
 
-        // For managers, their requests can only be approved by Admins (handled by above guards: managers cannot approve their own, and only admin/manager can access this, and managers cannot approve other managers as they aren't assigned to them)
-
         $validated = $request->validate([
-            'approval_type' => 'required|string|in:paid_leave,unpaid_leave',
             'notes' => 'nullable|string',
         ]);
 
-        $approvalType = $validated['approval_type'];
         $applicant = $leaveRequest->user;
-        $isDeductible = ($approvalType === 'paid_leave');
 
-        if ($isDeductible && $applicant->leave_balance < $leaveRequest->total_days) {
+        // Balance Check for planned/unplanned leaves
+        if ($leaveRequest->leave_type !== 'complimentary' && $applicant->leave_balance < $leaveRequest->total_days) {
             return back()->with('error', "Insufficient leave balance. Employee has {$applicant->leave_balance} days available, but requested {$leaveRequest->total_days} days.");
         }
 
         try {
-            DB::transaction(function () use ($leaveRequest, $user, $applicant, $validated, $approvalType, $isDeductible) {
+            DB::transaction(function () use ($leaveRequest, $user, $applicant, $validated) {
                 $lockedRequest = LeaveRequest::where('id', $leaveRequest->id)->lockForUpdate()->first();
                 if ($lockedRequest->status !== 'pending') {
                     throw new \Exception('This request has already been processed.');
@@ -361,13 +430,12 @@ class LeaveRequestController extends Controller
 
                 $lockedRequest->update([
                     'status' => 'approved',
-                    'leave_type' => $approvalType,
                     'approver_id' => $user->id,
                     'approved_at' => now(),
                     'notes' => $validated['notes'] ?? null,
                 ]);
 
-                if ($isDeductible) {
+                if ($lockedRequest->leave_type !== 'complimentary') {
                     $lockedUser = User::where('id', $applicant->id)->lockForUpdate()->first();
                     if ($lockedUser->leave_balance < $lockedRequest->total_days) {
                         throw new \Exception('Insufficient leave balance.');
@@ -381,7 +449,7 @@ class LeaveRequestController extends Controller
                         'leave_request_id' => $lockedRequest->id,
                         'amount' => -$lockedRequest->total_days,
                         'type' => 'deduction',
-                        'description' => 'Leave approved: ' . ucfirst(str_replace('_', ' ', $approvalType)),
+                        'description' => 'Leave approved: ' . ucfirst($lockedRequest->leave_type) . ' Leave',
                     ]);
                 }
 
@@ -484,7 +552,7 @@ class LeaveRequestController extends Controller
         }
 
         $request->validate([
-            'override_status' => 'required|string|in:approved_paid,approved_unpaid,rejected',
+            'override_status' => 'required|string|in:approved,rejected',
             'override_notes' => 'required|string|min:5',
         ]);
 
@@ -492,31 +560,36 @@ class LeaveRequestController extends Controller
         $notes = $request->input('override_notes');
         $applicant = $leaveRequest->user;
 
-        $wasDeducted = ($leaveRequest->status === 'approved' && !in_array($leaveRequest->leave_type, ['unpaid_leave', 'work_from_home']));
-        $shouldBeDeducted = ($newOverrideStatus === 'approved_paid');
+        $wasApproved = ($leaveRequest->status === 'approved');
+        $shouldBeApproved = ($newOverrideStatus === 'approved');
 
-        if (!$wasDeducted && $shouldBeDeducted) {
+        // Validation for Planned/Unplanned Leave balance checking
+        if (!$wasApproved && $shouldBeApproved && $leaveRequest->leave_type !== 'complimentary') {
             if ($applicant->leave_balance < $leaveRequest->total_days) {
                 return back()->with('error', "Insufficient leave balance. Employee has {$applicant->leave_balance} days available, but requested {$leaveRequest->total_days} days.");
             }
         }
 
+        // Validation for Complimentary credit checking
+        if (!$wasApproved && $shouldBeApproved && $leaveRequest->leave_type === 'complimentary') {
+            $available = $applicant->getAvailableBirthdayYears($leaveRequest->start_date);
+            if (empty($available)) {
+                return back()->with('error', 'Birthday Leave credit is not available or locked for this date.');
+            }
+        }
+
         try {
-            DB::transaction(function () use ($leaveRequest, $user, $applicant, $newOverrideStatus, $wasDeducted, $shouldBeDeducted, $notes) {
+            DB::transaction(function () use ($leaveRequest, $user, $applicant, $newOverrideStatus, $wasApproved, $shouldBeApproved, $notes) {
                 $lockedRequest = LeaveRequest::where('id', $leaveRequest->id)->lockForUpdate()->first();
                 $oldStatus = $lockedRequest->status;
 
-                $newStatus = ($newOverrideStatus === 'rejected') ? 'rejected' : 'approved';
-                $newLeaveType = ($newOverrideStatus === 'approved_paid') ? 'paid_leave' : (($newOverrideStatus === 'approved_unpaid') ? 'unpaid_leave' : $lockedRequest->leave_type);
-
                 $updateData = [
-                    'status' => $newStatus,
-                    'leave_type' => $newLeaveType,
+                    'status' => $newOverrideStatus,
                     'approver_id' => $user->id,
                     'approved_at' => now(),
                 ];
 
-                if ($newStatus === 'approved') {
+                if ($shouldBeApproved) {
                     $updateData['notes'] = $notes;
                     $updateData['rejection_reason'] = null;
                 } else {
@@ -528,40 +601,68 @@ class LeaveRequestController extends Controller
 
                 $lockedUser = User::where('id', $applicant->id)->lockForUpdate()->first();
 
-                // Case 1: Refund balance (was previously deducted, but no longer should be)
-                if ($wasDeducted && !$shouldBeDeducted) {
-                    $lockedUser->leave_balance += $lockedRequest->total_days;
-                    $lockedUser->save();
+                // State Transitions
+                // Case 1: Was approved, now rejected (Refund or Restore Credit)
+                if ($wasApproved && !$shouldBeApproved) {
+                    if ($lockedRequest->leave_type === 'complimentary') {
+                        // Restore birthday leave credit
+                        $credit = $lockedRequest->leaveCredit;
+                        if ($credit) {
+                            $lockedCredit = LeaveCredit::where('id', $credit->id)->lockForUpdate()->first();
+                            $lockedCredit->used_amount = 0.00;
+                            $lockedCredit->save();
+                        }
+                        $lockedRequest->update(['leave_credit_id' => null]);
+                    } else {
+                        // Refund regular balance
+                        $lockedUser->leave_balance += $lockedRequest->total_days;
+                        $lockedUser->save();
 
-                    LeaveLedgerEntry::create([
-                        'user_id' => $lockedUser->id,
-                        'leave_request_id' => $lockedRequest->id,
-                        'amount' => $lockedRequest->total_days,
-                        'type' => 'refund',
-                        'description' => 'Refund due to admin override/reclassification of approved leave',
-                    ]);
-                }
-                // Case 2: Deduct balance (was NOT previously deducted, but now should be)
-                elseif (!$wasDeducted && $shouldBeDeducted) {
-                    if ($lockedUser->leave_balance < $lockedRequest->total_days) {
-                        throw new \Exception('Insufficient leave balance.');
+                        LeaveLedgerEntry::create([
+                            'user_id' => $lockedUser->id,
+                            'leave_request_id' => $lockedRequest->id,
+                            'amount' => $lockedRequest->total_days,
+                            'type' => 'refund',
+                            'description' => 'Refund due to admin override/reclassification of approved leave',
+                        ]);
                     }
-                    $lockedUser->leave_balance -= $lockedRequest->total_days;
-                    $lockedUser->save();
+                }
+                // Case 2: Was NOT approved, now approved (Deduct or Consume Credit)
+                elseif (!$wasApproved && $shouldBeApproved) {
+                    if ($lockedRequest->leave_type === 'complimentary') {
+                        // Consume birthday leave credit
+                        $available = $lockedUser->getAvailableBirthdayYears($lockedRequest->start_date);
+                        if (empty($available)) {
+                            throw new \Exception('Birthday Leave credit is not available or locked.');
+                        }
+                        $selectedCredit = $available[0];
+                        $lockedCredit = LeaveCredit::where('id', $selectedCredit['credit_id'])->lockForUpdate()->first();
+                        $lockedCredit->used_amount = $lockedCredit->amount;
+                        $lockedCredit->save();
 
-                    LeaveLedgerEntry::create([
-                        'user_id' => $lockedUser->id,
-                        'leave_request_id' => $lockedRequest->id,
-                        'amount' => -$lockedRequest->total_days,
-                        'type' => 'deduction',
-                        'description' => 'Leave approved via admin override: Paid Leave',
-                    ]);
+                        $lockedRequest->update(['leave_credit_id' => $lockedCredit->id]);
+                    } else {
+                        // Deduct regular balance
+                        if ($lockedUser->leave_balance < $lockedRequest->total_days) {
+                            throw new \Exception('Insufficient leave balance.');
+                        }
+                        $lockedUser->leave_balance -= $lockedRequest->total_days;
+                        $lockedUser->save();
+
+                        LeaveLedgerEntry::create([
+                            'user_id' => $lockedUser->id,
+                            'leave_request_id' => $lockedRequest->id,
+                            'amount' => -$lockedRequest->total_days,
+                            'type' => 'deduction',
+                            'description' => 'Leave approved via admin override: ' . ucfirst($lockedRequest->leave_type) . ' Leave',
+                        ]);
+                    }
                 }
 
                 LeaveRequestLog::create([
                     'leave_request_id' => $lockedRequest->id,
                     'from_status' => $oldStatus,
-                    'to_status' => $newStatus,
+                    'to_status' => $newOverrideStatus,
                     'action' => 'overridden',
                     'notes' => $notes,
                     'user_id' => $user->id,

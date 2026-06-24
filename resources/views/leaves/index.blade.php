@@ -54,30 +54,18 @@
             <!-- Leave Summary Stats -->
             <div class="space-y-3">
                 <h4 class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Your Approved Leave Summary (Current Year)</h4>
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div class="bg-surface p-4 rounded border border-hairline flex flex-col justify-between">
-                        <span class="text-vellum-muted text-xs font-semibold">Casual Leave</span>
-                        <h3 class="text-2xl font-bold text-vellum mt-2 font-display">{{ $stats['casual_leave'] }} days</h3>
+                        <span class="text-vellum-muted text-xs font-semibold">Planned Leave</span>
+                        <h3 class="text-2xl font-bold text-vellum mt-2 font-display">{{ $stats['planned'] }} days</h3>
                     </div>
                     <div class="bg-surface p-4 rounded border border-hairline flex flex-col justify-between">
-                        <span class="text-vellum-muted text-xs font-semibold">Sick Leave</span>
-                        <h3 class="text-2xl font-bold text-vellum mt-2 font-display">{{ $stats['sick_leave'] }} days</h3>
+                        <span class="text-vellum-muted text-xs font-semibold">Unplanned Leave</span>
+                        <h3 class="text-2xl font-bold text-vellum mt-2 font-display">{{ $stats['unplanned'] }} days</h3>
                     </div>
                     <div class="bg-surface p-4 rounded border border-hairline flex flex-col justify-between">
-                        <span class="text-vellum-muted text-xs font-semibold">Paid Leave</span>
-                        <h3 class="text-2xl font-bold text-vellum mt-2 font-display">{{ $stats['paid_leave'] }} days</h3>
-                    </div>
-                    <div class="bg-surface p-4 rounded border border-hairline flex flex-col justify-between">
-                        <span class="text-vellum-muted text-xs font-semibold">Unpaid Leave</span>
-                        <h3 class="text-2xl font-bold text-vellum mt-2 font-display">{{ $stats['unpaid_leave'] }} days</h3>
-                    </div>
-                    <div class="bg-surface p-4 rounded border border-hairline flex flex-col justify-between">
-                        <span class="text-vellum-muted text-xs font-semibold">WFH</span>
-                        <h3 class="text-2xl font-bold text-vellum mt-2 font-display">{{ $stats['work_from_home'] }} days</h3>
-                    </div>
-                    <div class="bg-surface p-4 rounded border border-hairline flex flex-col justify-between">
-                        <span class="text-vellum-muted text-xs font-semibold">Emergency</span>
-                        <h3 class="text-2xl font-bold text-vellum mt-2 font-display">{{ $stats['emergency_leave'] }} days</h3>
+                        <span class="text-vellum-muted text-xs font-semibold">Birthday Leave</span>
+                        <h3 class="text-2xl font-bold text-vellum mt-2 font-display">{{ $stats['complimentary'] }} days</h3>
                     </div>
                     <div class="bg-brass/10 p-4 rounded border border-brass/30 flex flex-col justify-between">
                         <span class="text-brass text-xs font-bold">Total Approved</span>
@@ -116,7 +104,7 @@
                                             {{ $req->start_date->format('M d, Y') }} - {{ $req->end_date->format('M d, Y') }}
                                         </td>
                                         <td class="py-3 px-4 text-vellum capitalize">
-                                            {{ $req->leave_type ? str_replace('_', ' ', $req->leave_type) : 'Pending Classification' }}
+                                            {{ $req->leave_type === 'complimentary' ? 'Birthday Leave' : ($req->leave_type ? str_replace('_', ' ', $req->leave_type) : 'Pending Classification') }}
                                         </td>
                                         <td class="py-3 px-4 text-center text-vellum font-semibold">
                                             {{ $req->total_days }}
@@ -193,7 +181,7 @@
                                             <div class="text-xs text-vellum-faint font-mono">{{ $request->user->employee_id }} ({{ ucfirst($request->user->role) }})</div>
                                         </td>
                                         <td class="py-3 px-4 font-medium text-vellum capitalize">
-                                            {{ $request->leave_type ? str_replace('_', ' ', $request->leave_type) : 'Pending Classification' }}
+                                            {{ $request->leave_type === 'complimentary' ? 'Birthday Leave' : ($request->leave_type ? str_replace('_', ' ', $request->leave_type) : 'Pending Classification') }}
                                         </td>
                                         <td class="py-3 px-4 text-vellum-muted">
                                             {{ $request->start_date->format('M d, Y') }} - {{ $request->end_date->format('M d, Y') }}
@@ -256,7 +244,7 @@
                                             <div class="text-xs text-vellum-faint font-mono">{{ $request->user->employee_id }}</div>
                                         </td>
                                         <td class="py-3 px-4 capitalize text-vellum">
-                                            {{ $request->leave_type ? str_replace('_', ' ', $request->leave_type) : 'Pending Classification' }}
+                                            {{ $request->leave_type === 'complimentary' ? 'Birthday Leave' : ($request->leave_type ? str_replace('_', ' ', $request->leave_type) : 'Pending Classification') }}
                                         </td>
                                         <td class="py-3 px-4 text-vellum-muted">
                                             {{ $request->start_date->format('M d, Y') }} - {{ $request->end_date->format('M d, Y') }}
@@ -310,11 +298,8 @@
                         <button type="button" onclick="closeModal('approveModal')" class="bg-surface-raised hover:bg-surface-raised/80 text-vellum font-semibold py-2 px-4 rounded-md transition duration-200 border border-hairline text-xs uppercase tracking-wider">
                             Cancel
                         </button>
-                        <button type="submit" name="approval_type" value="paid_leave" class="bg-forest hover:bg-forest/90 text-canvas font-bold py-2 px-4 rounded-md transition duration-200 shadow-md uppercase tracking-wider text-xs">
-                            Approve as Paid
-                        </button>
-                        <button type="submit" name="approval_type" value="unpaid_leave" class="bg-brass hover:bg-brass/90 text-canvas font-bold py-2 px-4 rounded-md transition duration-200 shadow-md uppercase tracking-wider text-xs">
-                            Approve as Unpaid
+                        <button type="submit" class="bg-forest hover:bg-forest/90 text-canvas font-bold py-2 px-4 rounded-md transition duration-200 shadow-md uppercase tracking-wider text-xs">
+                            Confirm Approve
                         </button>
                     </div>
                 </div>
@@ -358,8 +343,7 @@
                         <label for="override_status" class="block text-sm font-medium text-vellum-muted mb-1">Override Status</label>
                         <select name="override_status" id="override_status" required
                                 class="w-full bg-surface-raised border border-hairline rounded-md text-vellum px-3 py-2 focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
-                            <option value="approved_paid" class="bg-surface text-vellum">Approved as Paid Leave</option>
-                            <option value="approved_unpaid" class="bg-surface text-vellum">Approved as Unpaid Leave</option>
+                            <option value="approved" class="bg-surface text-vellum">Approved</option>
                             <option value="rejected" class="bg-surface text-vellum">Rejected</option>
                         </select>
                     </div>
@@ -396,9 +380,9 @@
             document.getElementById('overrideForm').action = '/leaves/' + id + '/override';
             const statusSelect = document.getElementById('override_status');
             if (currentStatus === 'approved') {
-                statusSelect.value = (leaveType === 'unpaid_leave') ? 'approved_paid' : 'rejected';
+                statusSelect.value = 'rejected';
             } else {
-                statusSelect.value = 'approved_paid';
+                statusSelect.value = 'approved';
             }
             document.getElementById('overrideModal').classList.remove('hidden');
         }

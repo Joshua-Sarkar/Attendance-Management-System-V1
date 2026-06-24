@@ -201,7 +201,7 @@ To log employee daily check-in and check-out timestamps, evaluate check-in delay
 ## 5. Leave Request Management
 
 ### Business Purpose
-To allow employees to submit leave applications, route requests to designated supervisors, enable managers to review and classify leaves during approval, handle employee self-cancellations, and permit administrators to override past decisions.
+To allow employees to submit leave applications under Planned, Unplanned, and Birthday Leave categories, route requests to designated supervisors, dynamically resolve daily attendance status outcomes (`on_leave` vs `absent`) based on approval status for future payroll consumption, and manage complimentary leave credits (Birthday Leave) with automated locking and expiration thresholds.
 
 ### Architecture Lineage
 * **Original Business Problem:** Leaves were managed via emails and verbal agreements. Staff had to classify their own leaves (Casual, Sick, LOP), which led to incorrect ledger entries and verification bottlenecks.
@@ -209,36 +209,42 @@ To allow employees to submit leave applications, route requests to designated su
 * **Major Evolutions Across Releases:**
   * *Phase E:* Established the core request and status logs schemas, status transitions, and basic approvals routing.
   * *Phase 4.6:* Simplified workflows by making `leave_type` nullable in the database. General employees submit requests with dates/reasons only; managers classify them as Paid or Unpaid during approval.
-* **Current Implementation:** Employees apply via simple forms, managers review and decide classifications, and admins retain override controls.
+  * *Phase 4.7.2:* Completely removed Paid/Unpaid selection. Submissions must select from Planned, Unplanned, or Birthday Leave (complimentary). Balance deduction and salary protection are determined strictly by approval status. Dynamic attendance resolution checks for approved requests to set status to `on_leave`. Exposing a generic `leave_credits` engine for birthday credits sync, leap year offsets, DOB updates locking, and auto-expirations.
+* **Current Implementation:** Employees apply via simple forms selecting Planned, Unplanned, or Birthday Leave. Approved planned/unplanned requests deduct balance and protect salary. Birthday leaves consume a synced `leave_credits` token. Cancellation, rejection, and overrides restore balances and credits, and recalculate attendance to `absent` (if no check-in exists).
 * **Related Migrations:**
   * [2026_06_11_153000_create_leave_requests_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_11_153000_create_leave_requests_table.php) (primary table)
   * [2026_06_11_153500_create_leave_request_logs_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_11_153500_create_leave_request_logs_table.php) (status audit trail)
-  * [2026_06_23_184204_make_leave_type_nullable_in_leave_requests_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_23_184204_make_leave_type_nullable_in_leave_requests_table.php) (nullability refactor)
+  * [2026_06_24_154000_create_leave_credits_table.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_24_154000_create_leave_credits_table.php) (reusable leave credits engine)
+  * [2026_06_24_154400_add_leave_credit_id_to_leave_requests.php](file:///c:/Users/Lenovo/AMS-V1/database/migrations/2026_06_24_154400_add_leave_credit_id_to_leave_requests.php) (associates requests with credits)
 * **Related Tests:**
   * [LeaveManagementTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/LeaveManagementTest.php) (validates request scopes, overrides, overlaps, and cancellations)
+  * [LeaveAuthorizationModelTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/LeaveAuthorizationModelTest.php) (asserts planned/unplanned, birthday leave credits sync/expire, leap years, auto-approvals, and overrides)
 * **Related Decisions:**
   * [ADR 6: Simplified Nullable Leave Requests](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-6-simplified-nullable-leave-requests-leave-type-nullability)
+  * [ADR 14: Reusable Leave Credit & Approval-Driven Attendance Resolution Architecture](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md#adr-14-reusable-leave-credit--approval-driven-attendance-resolution-architecture)
 
 ### Codebase Mappings
 * **Controllers:**
   * [LeaveRequestController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/LeaveRequestController.php) (submits requests, checks balance limits, applies approvals, rejects, cancels, and admin overrides)
 * **Models:**
-  * [LeaveRequest.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/LeaveRequest.php) (defines dates and total days)
+  * [LeaveRequest.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/LeaveRequest.php) (defines dates, total days, and relationship to credits)
+  * [LeaveCredit.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/LeaveCredit.php) (leave credit records)
   * [LeaveRequestLog.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/LeaveRequestLog.php) (stores request actions audit trail)
 * **Routes:**
   * `leaves.index` (list logs)
   * `leaves.create` / `leaves.store` (blank apply form)
   * `leaves.approve` / `leaves.reject` / `leaves.cancel` / `leaves.override`
 * **Views:**
-  * `resources/views/leaves/index.blade.php`, `create.blade.php`, `show.blade.php`
+  * `resources/views/leaves/index.blade.php`, `create.blade.php`, `show.blade.php` (renders custom stats and labels)
 * **Migrations:**
   * `2026_06_11_153000_create_leave_requests_table.php`
-  * `2026_06_11_153500_create_leave_request_logs_table.php` (tracks user details and status changes)
-  * `2026_06_23_184204_make_leave_type_nullable_in_leave_requests_table.php` (nullable change)
+  * `2026_06_24_154000_create_leave_credits_table.php` (creates credits schema)
+  * `2026_06_24_154400_add_leave_credit_id_to_leave_requests.php` (links requests and credits)
 * **Feature Tests:**
   * [LeaveManagementTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/LeaveManagementTest.php) (asserts request submissions, manager approval boundaries, overlapping date checks, self-cancellation routes, and admin self-approvals)
-* **Release Introduced:** `v1.0-phase-e` (Foundation) and `v1.2-phase-4.6` (Simplified Nullable Leave)
-* **Current Operational Status:** Fully operational. Active overlaps are validated and blocked during submission to prevent duplicate bookings.
+  * [LeaveAuthorizationModelTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/LeaveAuthorizationModelTest.php) (tests planned/unplanned, birthday leave credits sync/expire, leap years, auto-approvals, and overrides)
+* **Release Introduced:** `v1.0-phase-e` (Foundation), `v1.2-phase-4.6` (Simplified Nullable Leave), and `v1.2-phase-4.7.2` (Leave Credits & Approval-driven Attendance)
+* **Current Operational Status:** Fully operational. Overlaps are validated, birthday credits are dynamically synced on birthday - 1 day, and attendance resolves correctly.
 
 ---
 

@@ -355,3 +355,35 @@ Additionally, write a dedicated regression check inside [TimezoneTest.php](file:
   * [TimezoneTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/TimezoneTest.php) (verification suite)
 * **Related Release:** Phase 4.7 (`v1.2-docs-baseline` tag)
 
+---
+
+## ADR 14: Reusable Leave Credit & Approval-Driven Attendance Resolution Architecture
+
+### Problem
+Legacy workflows allowed employees to classify their leave requests directly as Paid or Unpaid. This required manual balance checks and created administrative friction. Furthermore, the system lacked a structured backend engine to grant, track, and expire individual complimentary leave credits (e.g. Birthday Leaves) and dynamically sync daily attendance records for future payroll deduction processing.
+
+### Context
+We want to simplify employee workflows by removing Paid/Unpaid selection. Balance deductions and compensation outcomes must be determined solely by approval status (Approved planned/unplanned leaves deduct balance and protect salary, rejected leaves default to absent/salary deducted). We also need a generic leave credits table to handle birthday and future credit allocations.
+
+### Alternatives Considered
+* **Option A: Dynamic Attendance Status as Source of Truth (Chosen):** Approved leave requests dynamically mark dates as `on_leave`. Cancellation, rejection, and overrides automatically fall back to `absent` (if no check-in exists). No dedicated `payroll_events` table is created in this phase.
+* **Option B: Dedicated Payroll Events Ledger Table:** Write to a separate ledger table (`payroll_events`) for all adjustments and absences.
+  * *Trade-off:* Creating this table before payroll calculations or periods are defined in Phase 5 is highly speculative and creates technical debt.
+
+### Chosen Solution
+Implement Option A. The `status` field on `attendances` resolves dynamically: approved leave requests map to `on_leave` (salary protected), while rejected/cancelled requests default to `absent` (salary deducted). Introduce the `leave_credits` table containing fields for user allocation, amounts, unlocked/expires thresholds, status (active, expired, voided), and source identifiers to prevent duplicate grants (e.g., `birthday_2026`).
+
+### Consequences
+* **Positive:**
+  * **Simplicity:** No speculative tables for payroll; existing `attendances` status is the single source of truth.
+  * **Dynamic Audits:** Approved leaves automatically override absent flags, while physical check-ins override approved leaves.
+  * **Reusable Credits:** Easy addition of future credit types (e.g., service anniversaries).
+* **Negative:**
+  * Requires dynamic scanning of leave requests during calendar and workforce reports. Covered by eager-loading optimizations in `AttendanceService` to maintain $O(N)$ execution.
+* **Related Files:**
+  * [LeaveCredit.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/LeaveCredit.php) (model)
+  * [User.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/User.php) (birthday credit syncer)
+  * [LeaveRequestController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/LeaveRequestController.php) (controller updates)
+  * [AttendanceService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceService.php) (attendance resolver)
+* **Related Release:** Phase 4.7.2 (`v1.2-phase-4.7.2` completion)
+

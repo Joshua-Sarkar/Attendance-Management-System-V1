@@ -118,6 +118,16 @@ This document indexes all verification suites, automated test files, and asserti
     7. **Cancellation Actions:** Verifies employees can cancel their own pending or approved requests.
     8. **Attendance Sync (Rule B):** Confirms approved leaves automatically override physical dashboard status as `on_leave` or `wfh` if no check-in exists.
     9. **Physical Override:** Confirms a physical dashboard clock-in event overrides active leave requests, setting status back to `present` or `late`.
+* **[LeaveAuthorizationModelTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/LeaveAuthorizationModelTest.php)**
+  * *Coverage Focus:* Validates planned and unplanned leave approvals/rejections, dynamic birthday leave credits lifecycle (syncing, unlocking, expiration), auto-approvals, leap year birthday edge cases, and admin override corrections.
+  * *Scenarios Verified:*
+    1. **Planned Leave Approval:** Asserts that approving planned leaves deducts standard balances and dynamically resolves attendance to `on_leave`.
+    2. **Planned Leave Rejection:** Asserts that rejecting planned leaves does not deduct balance and defaults attendance status to `absent` (salary-deducted) when no clock-in exists.
+    3. **Birthday Credit Sync & Expiry:** Verifies birthday credits are dynamically synced/unlocked exactly 1 day before the birthday, stay active, and expire 12 months after the birthday.
+    4. **Birthday Leave Auto-Approval:** Confirms employee birthday leave applications are auto-approved and consume the synced complimentary leave credit token while leaving the regular leave balance untouched.
+    5. **Birthday Override Restore:** Asserts that an Admin overriding and rejecting an approved birthday leave restores the complimentary leave credit used and sets attendance status back to `absent`.
+    6. **Physical Clock-in Override:** Verifies that physical check-in events override approved leave requests, resolving attendance to `present` or `late`.
+    7. **Leap Year Support:** Validates that employees born on February 29 have their birthday credits successfully unlocked on February 27 in non-leap years.
 
 ---
 

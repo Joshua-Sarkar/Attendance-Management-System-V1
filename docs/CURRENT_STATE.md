@@ -1,20 +1,20 @@
 # AMS-V1 — Current State
 
-This document represents the live, production-ready operational state of the Attendance Management System Version 1 (AMS-V1) as of **June 23, 2026**.
+This document represents the live, production-ready operational state of the Attendance Management System Version 1 (AMS-V1) as of **June 24, 2026**.
 
 ---
 
 ## 1. System Metadata
 
-* **Current Version:** `v1.2-phase-4.6`
-* **Latest Functional Tag:** `v1.2-phase-4.6` (pointing to commit `2385dbb`)
+* **Current Version:** `v1.2-phase-4.7.2`
+* **Latest Functional Tag:** `v1.2-phase-4.7.2` (completed backend leave authorization features)
 * **Documentation Baseline Tag:** `v1.2-docs-baseline` (pointing to commit `e00d32b` / baseline refinements)
-* **Latest Commit:** `docs(audit): remediate duplicates, add ADR-13, map framework tables, and link migrations` (`e00d32b`)
+* **Latest Commit:** `feat(leave): implement reusable leave credit database schema and dynamic birthday credits sync`
 * **Current Branch:** `main`
 * **Production Environment:** Hostinger Linux Shared Server (cPanel setup)
 * **Production Database Engine:** MySQL 8.0 (utilizing transactional row locks; local runs use SQLite in-memory)
-* **Last Deployment Date:** June 23, 2026
-* **Last Database Migration Executed:** `2026_06_23_184204_make_leave_type_nullable_in_leave_requests_table.php` (makes `leave_type` nullable in the `leave_requests` table to support simplified employee workflows)
+* **Last Deployment Date:** June 24, 2026
+* **Last Database Migration Executed:** `2026_06_24_154400_add_leave_credit_id_to_leave_requests.php` (adds relation from leave requests to the new reusable leave credits database)
 
 ---
 
@@ -38,10 +38,12 @@ This document represents the live, production-ready operational state of the Att
 * **Punctuality Audit Center:** Date, department, status, and search filters for check-in logs, alongside late arrivals and delay averages.
 
 ### 4. Leave Management & Balance Ledger
-* Nullable leave type submissions (employees apply for leaves with only start/end dates and reason).
-* Manager/Admin approval workflow (approved as **Paid Leave** or **Unpaid Leave**, or rejected).
+* Planned, Unplanned, and Birthday Leave categories (replaces legacy Paid/Unpaid selections).
+* Approval status is the sole determinant of compensation outcome. Approved leaves deduct balance and protect salary (marked as `on_leave`). Rejected or cancelled leaves with no check-in default to `absent` (salary deducted). Physical check-ins override leave request statuses.
+* **Reusable Leave Credit Engine:** Extensible ledger supporting allocation, tracking, consumption, and expiration of special leave credits (like Birthday Leave).
+* **Birthday Leave Credits Sync:** Dynamic credits syncer unlocking birthday leave on Birthday - 1 day, automatically expiring unused credits on Birthday + 12 months, and supporting leap year (Feb 29) birthday fallbacks to Feb 28.
 * Transaction audit ledger (`leave_ledger_entries` records all adjustments: opening balances, accruals, deductions, refunds).
-* Concurrency checks via `lockForUpdate()` database row-level locking on user tables.
+* Concurrency checks via `lockForUpdate()` database row-level locking on user tables and leave credits.
 
 ### 5. Zimyo Migration Engine
 * Bulk Excel file importer using `PhpSpreadsheet` library.
@@ -65,11 +67,11 @@ This document represents the live, production-ready operational state of the Att
 ### Managers (Department Heads)
 * Scoped visibility limited to assigned employees.
 * Ability to view direct reports' daily attendance records.
-* Ability to approve (Paid/Unpaid) or reject leave requests for assigned employees.
+* Ability to approve or reject leave requests for assigned employees.
 
 ### Employees (Workforce Members)
 * Clock-in and clock-out self-service.
-* Leave application submissions and balance checks.
+* Leave application submissions (Planned, Unplanned, or Birthday Leave) and balance checks.
 * Personal dashboard tracking (attendance rates, on-time streaks, weekly work hours).
 * Profile correction request submissions.
 
@@ -78,12 +80,13 @@ This document represents the live, production-ready operational state of the Att
 ## 4. Current Quality & Codebase Health
 
 * **Test Suite Status:** 100% green.
-* **Test Count:** 98 feature tests, 534 assertions.
+* **Test Count:** 102 feature tests, 546 assertions.
 * **Open Issues:** None.
 
 ---
 
 ## 5. Development Timeline
 
-* **Active Phase:** Phase 4.6 (completed).
-* **Next Planned Phase:** **Phase 5 — Payroll Integration** (calculating monthly salary components based on clock-in records, late arrival logs, and unpaid leaves).
+* **Active Phase:** Phase 4.7.2 (completed).
+* **Next Planned Phase:** **Phase 4.7.3 — Readability & Accessibility Pass** (global contrast, typography improvements, and CSS updates).
+* **Deferred Phase:** **Phase 5 — Payroll Integration** (calculating monthly salary components based on clock-in records, late arrival logs, and unpaid leaves).

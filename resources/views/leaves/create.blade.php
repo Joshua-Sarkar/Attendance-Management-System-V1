@@ -24,21 +24,22 @@
             <form action="{{ route('leaves.store') }}" method="POST" class="space-y-6">
                 @csrf
 
-                <!-- Leave Type (Admin Only) -->
-                @if(auth()->user()->role === 'admin')
+                <!-- Leave Type (Global) -->
                 <div>
-                    <label for="leave_type" class="block text-sm font-medium text-on-surface-variant mb-1">Leave Classification</label>
+                    <label for="leave_type" class="block text-sm font-medium text-on-surface-variant mb-1">Leave Type</label>
                     <select name="leave_type" id="leave_type" required
                             class="w-full bg-surface-container border border-outline-variant/30 rounded-md text-on-surface px-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none">
-                        <option value="" disabled {{ old('leave_type') ? '' : 'selected' }}>Select Leave Classification</option>
-                        <option value="paid_leave" {{ old('leave_type') === 'paid_leave' ? 'selected' : '' }}>Paid Leave</option>
-                        <option value="unpaid_leave" {{ old('leave_type') === 'unpaid_leave' ? 'selected' : '' }}>Unpaid Leave</option>
+                        <option value="" disabled {{ old('leave_type') ? '' : 'selected' }}>Select Leave Type</option>
+                        <option value="planned" {{ old('leave_type') === 'planned' ? 'selected' : '' }}>Planned Leave</option>
+                        <option value="unplanned" {{ old('leave_type') === 'unplanned' ? 'selected' : '' }}>Unplanned Leave</option>
+                        <option value="complimentary" {{ old('leave_type') === 'complimentary' ? 'selected' : '' }} {{ !($hasBirthdayCredit ?? false) ? 'disabled' : '' }}>
+                            Birthday Leave {{ !($hasBirthdayCredit ?? false) ? '(No Birthday Credit Available)' : '' }}
+                        </option>
                     </select>
                     @error('leave_type')
                         <p class="text-error text-xs mt-1">{{ $message }}</p>
                     @enderror
                 </div>
-                @endif
 
                 <!-- Date Range Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">

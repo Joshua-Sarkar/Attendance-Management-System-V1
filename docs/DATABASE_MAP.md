@@ -117,7 +117,8 @@ Stores employee leave request applications and approval status classifications.
 * **Columns:**
   * `id` (`bigint unsigned`, Primary Key, Auto Increment): Unique identifier.
   * `user_id` (`bigint unsigned`, Foreign Key -> `users.id`): Submitting employee.
-  * `leave_type` (`varchar(255)`, Nullable): Resolved type (`paid_leave`, `unpaid_leave`, `work_from_home` - nullable for employees on create).
+  * `leave_type` (`varchar(255)`, Nullable): Resolved type (`planned`, `unplanned`, `complimentary`, `work_from_home` - or legacy `paid_leave`, `unpaid_leave`).
+  * `leave_credit_id` (`bigint unsigned`, Nullable, Foreign Key -> `leave_credits.id`): Associated leave credit consumed (e.g. for complimentary/birthday leaves).
   * `start_date` (`date`): Leave start date.
   * `end_date` (`date`): Leave end date.
   * `total_days` (`int unsigned`): Total booking duration.
@@ -133,6 +134,31 @@ Stores employee leave request applications and approval status classifications.
   * `PRIMARY KEY (id)`
   * `FOREIGN KEY leave_requests_user_id_foreign (user_id) REFERENCES users(id) ON DELETE CASCADE`
   * `FOREIGN KEY leave_requests_approver_id_foreign (approver_id) REFERENCES users(id) ON DELETE SET NULL`
+  * `FOREIGN KEY leave_requests_leave_credit_id_foreign (leave_credit_id) REFERENCES leave_credits(id) ON DELETE SET NULL`
+
+### Table: `leave_credits`
+Stores reusable leave credits allocated to employees (e.g. Birthday Leaves).
+
+* **Columns:**
+  * `id` (`bigint unsigned`, Primary Key, Auto Increment): Unique identifier.
+  * `user_id` (`bigint unsigned`, Foreign Key -> `users.id`): Target employee.
+  * `credit_type` (`varchar(255)`): Type of credit (e.g. `'birthday'`).
+  * `amount` (`decimal(8,2)`, Default: `1.00`): Total credit amount granted.
+  * `used_amount` (`decimal(8,2)`, Default: `0.00`): Amount of credit consumed.
+  * `status` (`varchar(50)`, Default: `'active'`): Current status (`active`, `expired`, `voided`).
+  * `unlocked_at` (`date`): Earliest date when the credit can be used.
+  * `expires_at` (`date`): Expiration date of the credit.
+  * `source_identifier` (`varchar(255)`): Unique token per employee cycle (e.g. `'birthday_2026'`).
+  * `granted_by` (`bigint unsigned`, Nullable, Foreign Key -> `users.id`): Who granted the credit.
+  * `notes` (`text`, Nullable): Grant notes.
+  * `source_metadata` (`json`, Nullable): Custom metadata payload.
+  * `created_at` / `updated_at` (`timestamp`): Database timestamps.
+
+* **Indexes & Keys:**
+  * `PRIMARY KEY (id)`
+  * `FOREIGN KEY leave_credits_user_id_foreign (user_id) REFERENCES users(id) ON DELETE CASCADE`
+  * `FOREIGN KEY leave_credits_granted_by_foreign (granted_by) REFERENCES users(id) ON DELETE SET NULL`
+  * `UNIQUE KEY leave_credits_user_id_source_identifier_unique (user_id, source_identifier)`
 
 ### Table: `leave_request_logs`
 Logs the chronological audit trail of all actions performed on a leave request.
@@ -142,7 +168,7 @@ Logs the chronological audit trail of all actions performed on a leave request.
   * `leave_request_id` (`bigint unsigned`, Foreign Key -> `leave_requests.id`): Monitored request.
   * `from_status` (`varchar(255)`, Nullable): Prior status state.
   * `to_status` (`varchar(255)`): Updated status state.
-  * `action` (`varchar(255)`): Executed action code (e.g. `submit`, `approve_paid`, `approve_unpaid`, `reject`, `cancel`, `override`).
+  * `action` (`varchar(255)`): Executed action code (e.g. `submit`, `approve`, `reject`, `cancel`, `override`).
   * `notes` (`text`, Nullable): Auditor notes.
   * `user_id` (`bigint unsigned`, Foreign Key -> `users.id`): User executing the action.
   * `created_at` (`timestamp`): Timestamp of the audit event.

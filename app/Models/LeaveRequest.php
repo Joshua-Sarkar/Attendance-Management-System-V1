@@ -11,6 +11,7 @@ class LeaveRequest extends Model
     protected $fillable = [
         'user_id',
         'leave_type',
+        'leave_credit_id',
         'start_date',
         'end_date',
         'total_days',
@@ -36,6 +37,11 @@ class LeaveRequest extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approver_id');
+    }
+
+    public function leaveCredit(): BelongsTo
+    {
+        return $this->belongsTo(LeaveCredit::class, 'leave_credit_id');
     }
 
     public function logs(): HasMany

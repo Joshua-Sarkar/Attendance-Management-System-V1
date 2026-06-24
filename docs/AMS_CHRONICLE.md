@@ -413,6 +413,34 @@ The evolution of the AMS-V1 project is structured into sequential development ph
 * **Database Changes:** Made the `leave_type` column nullable in the `leave_requests` table.
 * **Testing Performed:** Updated the test suite, confirming 100% success across 98 tests and 534 assertions.
 
+### Phase 4.7 — Architecture Traceability & Consolidation
+* **Business Problem:** Early speed-oriented development led to fragmented documentation, unmapped database configurations, missing historical git tags, and lack of clear traceability for key architectural constraints.
+* **Features Implemented:** Executed a comprehensive retrospective database, codebase, and security audit. Established Feature/Database/Test maps, registered historical tags, documented timezone locks and pessimistic locking strategies, and consolidated docs.
+* **Files Introduced/Modified:**
+  * [FEATURE_MAP.md](file:///c:/Users/Lenovo/AMS-V1/docs/FEATURE_MAP.md) [NEW]
+  * [DATABASE_MAP.md](file:///c:/Users/Lenovo/AMS-V1/docs/DATABASE_MAP.md) [NEW]
+  * [TEST_MAP.md](file:///c:/Users/Lenovo/AMS-V1/docs/TEST_MAP.md) [NEW]
+  * [DECISION_LOG.md](file:///c:/Users/Lenovo/AMS-V1/docs/DECISION_LOG.md) [NEW]
+  * [ARCHITECTURE_MAP.md](file:///c:/Users/Lenovo/AMS-V1/docs/ARCHITECTURE_MAP.md) [NEW]
+* **Database Changes:** None.
+* **Testing Performed:** Audit verification of all tests passing (98 tests, 534 assertions).
+
+### Phase 4.7.2 — Leave Authorization System & Credits Engine
+* **Business Problem:** Storing Paid/Unpaid selections on leave requests caused workflow friction and lacked automated controls for special credits (e.g. Birthday Leaves). Furthermore, the attendance system lacked a clear, approval-driven source of truth for daily payroll deductions.
+* **Features Implemented:** Removed Paid/Unpaid select workflows, replacing them with Planned, Unplanned, and Birthday Leave categories. Setup an approval-driven attendance resolution system where approved leaves resolve to `on_leave` (protecting salary) and rejected/cancelled leaves default to `absent` (salary-deducted) unless overridden by check-in logs. Built a reusable `leave_credits` engine that automatically syncs and unlocks birthday leave credits 1 day before the birthday, auto-approves requests, handles leap year fallbacks, blocks DOB modifications when active credits exist, and expires unused credits 12 months after the birthday.
+* **Files Introduced/Modified:**
+  * `database/migrations/2026_06_24_154000_create_leave_credits_table.php` [NEW]
+  * `database/migrations/2026_06_24_154400_add_leave_credit_id_to_leave_requests.php` [NEW]
+  * [LeaveCredit.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/LeaveCredit.php) [NEW]
+  * [User.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/User.php) [MODIFY]
+  * [LeaveRequest.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/LeaveRequest.php) [MODIFY]
+  * [LeaveRequestController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/LeaveRequestController.php) [MODIFY]
+  * [AttendanceService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceService.php) [MODIFY]
+  * [LeaveAuthorizationModelTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/LeaveAuthorizationModelTest.php) [NEW]
+  * views `leaves/create.blade.php`, `index.blade.php`, `show.blade.php` [MODIFY]
+* **Database Changes:** Created the `leave_credits` table (columns: `id`, `user_id`, `amount`, `used_amount`, `source_identifier`, `status`, `expires_at`, `granted_by`, `timestamps`). Added `leave_credit_id` (FK to `leave_credits.id`, nullable) to `leave_requests` table.
+* **Testing Performed:** Created a full suite of feature tests in `LeaveAuthorizationModelTest.php` and updated legacy tests to remove Paid/Unpaid paths, ensuring 100% test coverage with 102 passing tests (546 assertions).
+
 ---
 
 ## 5. Database Evolution History
@@ -485,6 +513,16 @@ This section documents the chronological progression of the database schema migr
 * **Table Modified:** `leave_requests`
 * **Columns Changed:** `leave_type` changed to nullable string.
 * **Requirement:** Allowed standard employees to submit leaves without selecting a type, moving classification to the approval stage.
+
+### 15. Migration `2026_06_24_154000_create_leave_credits_table.php`
+* **Created Table:** `leave_credits`
+* **Columns:** `id` (bigint, PK), `user_id` (foreign key, cascade), `amount` (decimal 8,2), `used_amount` (decimal 8,2, default 0.00), `source_identifier` (string, unique on user_id), `status` (string, default `active`), `expires_at` (timestamp), `granted_by` (foreign key, nullable, nullOnDelete), `timestamps`.
+* **Requirement:** Implemented a generic leave credit engine to grant, track, and expire individual special leave allocations (such as Birthday Leaves).
+
+### 16. Migration `2026_06_24_154400_add_leave_credit_id_to_leave_requests.php`
+* **Table Modified:** `leave_requests`
+* **Added to Leave Requests:** `leave_credit_id` (foreign key to `leave_credits.id`, nullable, nullOnDelete).
+* **Requirement:** Relates approved leave requests with the specific leave credits consumed.
 
 ---
 
@@ -786,6 +824,7 @@ Tracks leave request applications.
 * `approved_at` (timestamp, nullable)
 * `rejection_reason` (text, nullable)
 * `notes` (text, nullable)
+* `leave_credit_id` (FK to `leave_credits`, nullOnDelete, nullable)
 * `created_at`, `updated_at` (timestamps)
 
 ### 5. `leave_request_logs`
@@ -840,6 +879,18 @@ Tracks changes to user leave balances.
 * `description` (string, nullable)
 * `created_at`, `updated_at` (timestamps)
 
+### 10. `leave_credits`
+Tracks allocated special leave credits.
+* `id` (bigint, PK)
+* `user_id` (FK to `users`, cascade)
+* `amount` (decimal 8,2)
+* `used_amount` (decimal 8,2, default: 0.00)
+* `source_identifier` (string, unique for user)
+* `status` (string, default: `active`)
+* `expires_at` (timestamp)
+* `granted_by` (FK to `users`, nullable, nullOnDelete)
+* `created_at`, `updated_at` (timestamps)
+
 ---
 
 ## 15. Future Roadmap
@@ -882,3 +933,4 @@ Tracks changes to user leave balances.
 12. **Phase 4.5:** Added the `LeaveLedgerEntry` transaction log table, pessimistic row locking, and monthly accrual tasks.
 13. **Phase 4.6:** Simplified leave requests, moved leave type selection to the approval stage, added sidebar notification badges, and resolved view warnings.
 14. **Phase 4.7:** Conducted retrospective architecture audit, established Feature Map, Database Map, Test Map, Decision Log, and Architecture Map, and registered historical git tags locally, consolidating the documentation baseline under tag `v1.2-docs-baseline`.
+15. **Phase 4.7.2:** Implemented reusable leave credits database schema and dynamic birthday credits synchronizer, planned/unplanned leave types approval flow, and dynamic on_leave/absent attendance status resolution.

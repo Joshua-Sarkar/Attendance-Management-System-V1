@@ -19,7 +19,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-outline-variant/30 pb-4 gap-4">
                 <div>
                     <h3 class="text-xl font-bold text-on-surface capitalize">
-                        {{ $leaveRequest->leave_type ? str_replace('_', ' ', $leaveRequest->leave_type) : 'Pending Classification' }}
+                        {{ $leaveRequest->leave_type === 'complimentary' ? 'Birthday Leave' : ($leaveRequest->leave_type ? str_replace('_', ' ', $leaveRequest->leave_type) : 'Pending Classification') }}
                     </h3>
                     <p class="text-sm text-on-surface-variant mt-1">
                         Submitted by: <span class="font-semibold">{{ $leaveRequest->user->name }}</span> ({{ $leaveRequest->user->employee_id }})
