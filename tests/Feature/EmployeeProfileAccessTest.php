@@ -204,3 +204,41 @@ test('manually created employee receives DEFAULT_EMPLOYEE_PASSWORD and redirects
     expect($user->must_change_password)->toBeTrue();
     expect(Illuminate\Support\Facades\Hash::check(env('DEFAULT_EMPLOYEE_PASSWORD'), $user->password))->toBeTrue();
 });
+
+test('logged-in manager can view their direct reports but not other employees', function () {
+    $department = Department::create([
+        'name' => 'HR',
+        'code' => 'HRD',
+    ]);
+
+    $manager = User::factory()->create([
+        'role' => 'manager',
+        'status' => 'active',
+        'department_id' => $department->id,
+    ]);
+
+    $directReport = User::factory()->create([
+        'role' => 'employee',
+        'status' => 'active',
+        'manager_id' => $manager->id,
+        'department_id' => $department->id,
+    ]);
+
+    $otherEmployee = User::factory()->create([
+        'role' => 'employee',
+        'status' => 'active',
+        'manager_id' => null,
+        'department_id' => $department->id,
+    ]);
+
+    // 1. Manager can view direct report
+    $response = $this->actingAs($manager)
+        ->get(route('employees.show', $directReport));
+    $response->assertStatus(200);
+
+    // 2. Manager cannot view other employee (403)
+    $response = $this->actingAs($manager)
+        ->get(route('employees.show', $otherEmployee));
+    $response->assertStatus(403);
+});
+

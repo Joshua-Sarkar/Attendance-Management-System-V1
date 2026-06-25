@@ -27,7 +27,7 @@ test('it imports employees and updates profiles correctly from xlsx', function (
     ]);
 
     // Create a temporary Excel file
-    $tempFile = tempnam(sys_get_temp_dir(), 'import_test') . '.xlsx';
+    $tempFile = tempnam(storage_path('app'), 'import_test') . '.xlsx';
 
     $headers = [
         'Employee Code', 'City Type', 'Full Name', 'Father Name', 'Mother Name', 'Profile picture', 'Gender', 
@@ -188,7 +188,7 @@ test('it imports employees and updates profiles correctly from xlsx', function (
     expect($user1->email)->toBe('user1@example.com');
     expect($user1->name)->toBe('User One');
     expect($user1->status)->toBe('active');
-    expect($user1->role)->toBe('employee');
+    expect($user1->role)->toBe('manager');
     expect($user1->must_change_password)->toBeTrue();
     expect($user1->department_id)->toBe($engineering->id);
     expect($user1->phone)->toBe('1111111111');
@@ -245,7 +245,7 @@ test('admin can access import page and upload file successfully', function () {
     ]);
 
     // Create temporary Excel file
-    $tempFile = tempnam(sys_get_temp_dir(), 'import_test_web') . '.xlsx';
+    $tempFile = tempnam(storage_path('app'), 'import_test_web') . '.xlsx';
     
     $headers = [
         'Employee Code', 'Full Name', 'Official Email ID', 'Department', 'Employee Status'
