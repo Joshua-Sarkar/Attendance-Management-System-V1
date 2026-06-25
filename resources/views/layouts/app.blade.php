@@ -23,7 +23,7 @@
         <div class="flex-1 min-h-screen">
 
             <!-- Page Content -->
-            <main class="px-11 py-9 w-full {{ $attributes->has('wide') ? 'max-w-none' : 'max-w-[1180px] mx-auto' }}">
+            <main class="px-8 py-8 w-full max-w-[1600px] mx-auto">
                 <div id="page-wrapper">
                     @isset($header)
                         <header class="page flex items-end justify-between mb-8 pb-5 border-b border-hairline">

@@ -1,3 +1,5 @@
+@props(['timeline' => true])
+
 <x-app-layout>
     @isset($header)
         <x-slot name="header">
@@ -19,7 +21,7 @@
                 </div>
             @endisset
 
-            <div class="ledger flex flex-col">
+            <div class="{{ $timeline ? 'ledger' : 'pl-2' }} flex flex-col">
                 {{ $slot }}
             </div>
         </div>

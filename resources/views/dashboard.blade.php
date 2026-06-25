@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-executive-layout>
     <x-slot name="header">
         <h1 class="font-display font-medium text-[32px] tracking-wide text-vellum">
             @if(auth()->user()->role === 'manager')
@@ -12,7 +12,6 @@
         </div>
     </x-slot>
 
-    <div class="space-y-9">
         <!-- Dashboard Filters -->
         <div class="panel">
             <form method="GET" action="{{ route('dashboard') }}" class="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
@@ -302,4 +301,5 @@
             </div>
         </div>
     </div>
-</x-app-layout>
+</x-executive-layout>
+

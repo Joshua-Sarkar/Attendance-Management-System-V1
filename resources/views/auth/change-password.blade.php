@@ -1,5 +1,5 @@
-<x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+<x-auth-layout>
+    <div class="mb-4 text-sm text-vellum-muted">
         {{ __('You are logging in with a temporary password or your password reset is required. Please set a new secure password to access your account.') }}
     </div>
 
@@ -26,4 +26,4 @@
             </x-primary-button>
         </div>
     </form>
-</x-guest-layout>
+</x-auth-layout>

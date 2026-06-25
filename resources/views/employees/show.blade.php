@@ -1,100 +1,166 @@
-<div x-data="{ activeTab: 'personal' }">
-    <x-dossier-layout>
-        <x-slot name="header">
-            <div class="flex items-center justify-between w-full">
-                <div>
-                    <h1 class="font-display font-medium text-[32px] tracking-wide text-vellum">
-                        Employee Dossier
-                    </h1>
-                    <div class="text-[13px] text-vellum-muted mt-1.5 tracking-wide">
-                        Personnel file for {{ $user->name }} · ID: <span class="font-mono text-brass font-semibold">{{ $user->employee_id }}</span>
-                    </div>
-                </div>
-                
-                <div class="flex gap-2.5">
-                    @if(auth()->user()->role === 'admin')
-                        <x-primary-button onclick="window.location.href='{{ route('employees.edit', $user) }}'">
-                            Edit Profile
-                        </x-primary-button>
-                        
-                        <form method="POST" action="{{ route('admin.employees.reset-password', $user) }}" onsubmit="return confirm('Are you sure you want to reset this employee\'s password to default?');" class="inline">
-                            @csrf
-                            <x-danger-button type="submit">
-                                Reset Password
-                            </x-danger-button>
-                        </form>
-                    @endif
-
-                    @if(auth()->user()->id === $user->id && auth()->user()->role === 'employee')
-                        <button x-data @click="$dispatch('open-modal', 'correction-request-modal')"
-                                class="inline-flex items-center px-4 py-2 bg-brass/10 hover:bg-brass/20 text-brass border border-brass/30 rounded font-semibold text-xs uppercase tracking-widest transition duration-150 h-[40px]">
-                            Report Incorrect Information
-                        </button>
-                    @endif
-                </div>
-            </div>
-        </x-slot>
-
-        <!-- Session Notifications -->
-        @if(session('success'))
-            <div class="rounded bg-forest-bg border border-hairline text-forest px-4 py-3 text-sm mb-6">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if($errors->any())
-            <div class="rounded bg-burgundy-bg border border-hairline text-burgundy px-4 py-3 text-sm mb-6">
-                <ul class="list-disc pl-5">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <!-- Core Profile Overview Bar -->
-        <div class="flex items-center space-x-6 border-b border-hairline pb-6 mb-6">
-            <div class="h-16 w-16 rounded-full bg-brass flex items-center justify-center text-canvas text-2xl font-display font-medium shadow-sm">
-                {{ substr($user->name, 0, 2) }}
-            </div>
-            <div>
-                <h3 class="text-xl font-bold text-vellum font-display">{{ $user->name }}</h3>
-                <p class="text-xs text-vellum-muted mt-0.5">
-                    {{ $user->email }} · ID: <span class="font-mono text-brass">{{ $user->employee_id ?? 'N/A' }}</span>
-                </p>
-                <div class="mt-2 flex gap-2">
-                    <span class="tag {{ $user->status === 'active' ? 'present' : 'absent' }} text-[10px] font-mono uppercase tracking-[0.8px] px-2.5 py-0.5 rounded border
-                        @if($user->status === 'active') bg-forest-bg text-forest border-transparent
-                        @else bg-burgundy-bg text-burgundy border-transparent @endif">
-                        {{ $user->status }}
-                    </span>
-                    <span class="tag text-[10px] font-mono uppercase tracking-[0.8px] px-2.5 py-0.5 rounded border bg-slate-bg text-slate border-transparent">
-                        {{ $user->role }}
-                    </span>
-                </div>
+<x-dossier-layout>
+    <x-slot name="header">
+        <div class="flex flex-col gap-1.5">
+            <h1 class="font-display font-medium text-[32px] tracking-wide text-vellum">
+                Employee Dossier
+            </h1>
+            <div class="text-[13px] text-vellum-muted tracking-wide">
+                Personnel file for {{ $user->name }} · ID: <span class="font-mono text-brass font-semibold">{{ $user->employee_id }}</span>
             </div>
         </div>
+    </x-slot>
 
-        <!-- Left Tabs Sidebar -->
-        <x-slot name="tabs">
-            <button @click="activeTab = 'personal'" :class="activeTab === 'personal' ? 'bg-brass/[0.08] text-brass border-l-[3px] border-brass font-medium' : 'text-vellum-muted hover:bg-brass/[0.03] hover:text-vellum'" class="w-full text-left py-2.5 px-4 rounded-r transition text-[11px] uppercase tracking-wider font-semibold">
-                Personal details
-            </button>
-            <button @click="activeTab = 'employment'" :class="activeTab === 'employment' ? 'bg-brass/[0.08] text-brass border-l-[3px] border-brass font-medium' : 'text-vellum-muted hover:bg-brass/[0.03] hover:text-vellum'" class="w-full text-left py-2.5 px-4 rounded-r transition text-[11px] uppercase tracking-wider font-semibold">
-                Employment File
-            </button>
-            <button @click="activeTab = 'history'" :class="activeTab === 'history' ? 'bg-brass/[0.08] text-brass border-l-[3px] border-brass font-medium' : 'text-vellum-muted hover:bg-brass/[0.03] hover:text-vellum'" class="w-full text-left py-2.5 px-4 rounded-r transition text-[11px] uppercase tracking-wider font-semibold">
-                Education & Req
-            </button>
-        </x-slot>
+    <!-- Sticky Sidebar Navigation Links -->
+    <x-slot name="tabs">
+        <nav class="flex flex-col gap-1 w-full">
+            <a href="#identity" @click="activeSection = 'identity'" :class="activeSection === 'identity' ? 'bg-brass/[0.08] text-brass border-l-[3px] border-brass font-medium' : 'text-vellum-muted hover:bg-brass/[0.03] hover:text-vellum'" class="w-full text-left py-2.5 px-4 rounded-r transition text-[11px] uppercase tracking-wider font-semibold block">
+                Identity
+            </a>
+            <a href="#employment" @click="activeSection = 'employment'" :class="activeSection === 'employment' ? 'bg-brass/[0.08] text-brass border-l-[3px] border-brass font-medium' : 'text-vellum-muted hover:bg-brass/[0.03] hover:text-vellum'" class="w-full text-left py-2.5 px-4 rounded-r transition text-[11px] uppercase tracking-wider font-semibold block">
+                Employment
+            </a>
+            <a href="#contact" @click="activeSection = 'contact'" :class="activeSection === 'contact' ? 'bg-brass/[0.08] text-brass border-l-[3px] border-brass font-medium' : 'text-vellum-muted hover:bg-brass/[0.03] hover:text-vellum'" class="w-full text-left py-2.5 px-4 rounded-r transition text-[11px] uppercase tracking-wider font-semibold block">
+                Contact
+            </a>
+            <a href="#emergency" @click="activeSection = 'emergency'" :class="activeSection === 'emergency' ? 'bg-brass/[0.08] text-brass border-l-[3px] border-brass font-medium' : 'text-vellum-muted hover:bg-brass/[0.03] hover:text-vellum'" class="w-full text-left py-2.5 px-4 rounded-r transition text-[11px] uppercase tracking-wider font-semibold block">
+                Emergency
+            </a>
+            <a href="#payroll" @click="activeSection = 'payroll'" :class="activeSection === 'payroll' ? 'bg-brass/[0.08] text-brass border-l-[3px] border-brass font-medium' : 'text-vellum-muted hover:bg-brass/[0.03] hover:text-vellum'" class="w-full text-left py-2.5 px-4 rounded-r transition text-[11px] uppercase tracking-wider font-semibold block">
+                Payroll
+            </a>
+            <a href="#timeline" @click="activeSection = 'timeline'" :class="activeSection === 'timeline' ? 'bg-brass/[0.08] text-brass border-l-[3px] border-brass font-medium' : 'text-vellum-muted hover:bg-brass/[0.03] hover:text-vellum'" class="w-full text-left py-2.5 px-4 rounded-r transition text-[11px] uppercase tracking-wider font-semibold block">
+                Timeline
+            </a>
+            <a href="#history" @click="activeSection = 'history'" :class="activeSection === 'history' ? 'bg-brass/[0.08] text-brass border-l-[3px] border-brass font-medium' : 'text-vellum-muted hover:bg-brass/[0.03] hover:text-vellum'" class="w-full text-left py-2.5 px-4 rounded-r transition text-[11px] uppercase tracking-wider font-semibold block">
+                History
+            </a>
+            @if(auth()->user()->id === $user->id || auth()->user()->role === 'admin')
+                <a href="#corrections" @click="activeSection = 'corrections'" :class="activeSection === 'corrections' ? 'bg-brass/[0.08] text-brass border-l-[3px] border-brass font-medium' : 'text-vellum-muted hover:bg-brass/[0.03] hover:text-vellum'" class="w-full text-left py-2.5 px-4 rounded-r transition text-[11px] uppercase tracking-wider font-semibold block">
+                    Corrections
+                </a>
+            @endif
+        </nav>
+    </x-slot>
 
-        <!-- Main Details Pane Switcher -->
-        
-        <!-- TAB 1: PERSONAL DETAILS -->
-        <div x-show="activeTab === 'personal'" class="space-y-8">
-            <div>
-                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Personal Information</h4>
-                <div class="flex flex-col">
+    <x-slot name="summary">
+        <!-- RIGHT COLUMN: EMPLOYEE SUMMARY CARD -->
+        <div class="w-full bg-surface border border-hairline rounded p-6 flex flex-col items-center text-center shadow-sm">
+            <!-- Avatar box -->
+            <div class="h-20 w-20 rounded bg-brass flex items-center justify-center text-canvas text-3xl font-display font-medium border border-brass mb-4 shadow-sm">
+                {{ substr($user->name, 0, 2) }}
+            </div>
+            
+            <!-- Name -->
+            <h3 class="text-lg font-bold text-vellum font-display leading-tight">{{ $user->name }}</h3>
+            <p class="text-xs text-brass font-semibold font-mono mt-1.5">{{ $user->employee_id ?? 'N/A' }}</p>
+            <p class="text-xs text-vellum-muted mt-1 truncate w-full" title="{{ $user->email }}">{{ $user->email }}</p>
+            
+            <!-- Status & Role Tags -->
+            <div class="mt-4 flex flex-wrap gap-2 justify-center w-full">
+                <span class="tag {{ $user->status === 'active' ? 'present' : 'absent' }} text-[9.5px] font-mono uppercase tracking-[0.8px] px-2.5 py-0.5 rounded border
+                    @if($user->status === 'active') bg-forest-bg text-forest border-transparent
+                    @else bg-burgundy-bg text-burgundy border-transparent @endif">
+                    {{ $user->status }}
+                </span>
+                <span class="tag text-[9.5px] font-mono uppercase tracking-[0.8px] px-2.5 py-0.5 rounded border bg-slate-bg text-slate border-transparent">
+                    {{ $user->role }}
+                </span>
+            </div>
+            
+            <!-- Metadata list -->
+            <div class="w-full border-t border-hairline mt-5 pt-4 text-left text-xs space-y-2.5 text-vellum-muted">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-vellum-faint">Department:</span>
+                    <span class="font-medium text-vellum">{{ $user->department?->name ?? 'None' }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-vellum-faint">Manager:</span>
+                    <span class="font-medium text-vellum truncate max-w-[120px]" title="{{ $user->manager?->name ?? 'None' }}">{{ $user->manager?->name ?? 'None' }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-vellum-faint">Designation:</span>
+                    <span class="font-medium text-vellum truncate max-w-[120px]" title="{{ $user->employeeProfile?->designation ?? 'None' }}">{{ $user->employeeProfile?->designation ?? 'None' }}</span>
+                </div>
+            </div>
+
+            <!-- Admin Actions inside the card -->
+            <div class="w-full border-t border-hairline mt-5 pt-4 flex flex-col gap-2">
+                @if(auth()->user()->role === 'admin')
+                    <x-primary-button onclick="window.location.href='{{ route('employees.edit', $user) }}'" class="w-full justify-center !h-[36px] text-xs">
+                        Edit Profile
+                    </x-primary-button>
+                    
+                    <form method="POST" action="{{ route('admin.employees.reset-password', $user) }}" onsubmit="return confirm('Are you sure you want to reset this employee\'s password to default?');" class="w-full">
+                        @csrf
+                        <x-danger-button type="submit" class="w-full justify-center !h-[36px] text-xs">
+                            Reset Password
+                        </x-danger-button>
+                    </form>
+                @endif
+
+                @if(auth()->user()->id === $user->id && auth()->user()->role === 'employee')
+                    <button x-data @click="$dispatch('open-modal', 'correction-request-modal')"
+                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-brass/10 hover:bg-brass/20 text-brass border border-brass/30 rounded font-semibold text-xs uppercase tracking-widest transition duration-150 h-[36px]">
+                        Report Incorrect Info
+                    </button>
+                @endif
+            </div>
+        </div>
+    </x-slot>
+
+    <!-- Session Notifications -->
+    @if(session('success'))
+        <div class="rounded bg-forest-bg border border-hairline text-forest px-4 py-3 text-sm mb-6">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="rounded bg-burgundy-bg border border-hairline text-burgundy px-4 py-3 text-sm mb-6">
+            <ul class="list-disc pl-5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <!-- Main Ledger Dossier Body -->
+    <div class="space-y-12">
+
+            <!-- IDENTITY BLOCK -->
+            <div id="identity" x-show="activeSection === 'identity'" class="scroll-mt-6 flex flex-col md:flex-row items-start md:items-center justify-between border-b border-hairline pb-8">
+                <div class="flex items-center space-x-6">
+                    <div class="h-20 w-20 rounded bg-brass flex items-center justify-center text-canvas text-3xl font-display font-medium shadow-sm border border-brass">
+                        {{ substr($user->name, 0, 2) }}
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-vellum font-display">{{ $user->name }}</h3>
+                        <p class="text-sm text-vellum-muted mt-1">
+                            {{ $user->email }} · ID: <span class="font-mono text-brass font-semibold">{{ $user->employee_id ?? 'N/A' }}</span>
+                        </p>
+                        <div class="mt-3 flex gap-2">
+                            <span class="tag {{ $user->status === 'active' ? 'present' : 'absent' }} text-[10px] font-mono uppercase tracking-[0.8px] px-2.5 py-0.5 rounded border
+                                @if($user->status === 'active') bg-forest-bg text-forest border-transparent
+                                @else bg-burgundy-bg text-burgundy border-transparent @endif">
+                                {{ $user->status }}
+                            </span>
+                            <span class="tag text-[10px] font-mono uppercase tracking-[0.8px] px-2.5 py-0.5 rounded border bg-slate-bg text-slate border-transparent">
+                                {{ $user->role }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 md:mt-0 text-left md:text-right text-xs text-vellum-faint space-y-1 font-mono">
+                    <div>Created: {{ $user->created_at->format('Y-m-d H:i') }}</div>
+                    <div>Last Updated: {{ $user->updated_at->format('Y-m-d H:i') }}</div>
+                </div>
+            </div>
+
+            <!-- PERSONNEL INFORMATION -->
+            <div id="personnel" x-show="activeSection === 'identity'" class="scroll-mt-6 border-b border-hairline pb-8">
+                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Personnel Information</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                     <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
                         <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Father's Name</span>
                         <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->father_name ?? 'N/A' }}</span>
@@ -138,134 +204,10 @@
                 </div>
             </div>
 
-            <div>
-                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Current Address</h4>
-                <div class="flex flex-col">
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Address Line 1</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->current_address1 ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Address Line 2</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->current_address2 ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Country</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->current_country ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">State</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->current_state ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">City</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->current_city ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Zip Code</span>
-                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->current_zip ?? 'N/A' }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Permanent Address</h4>
-                <div class="mb-4">
-                    <span class="inline-flex items-center px-3 py-1 rounded text-xs font-semibold {{ $user->employeeProfile?->same_as_current_address ? 'bg-forest-bg text-forest border border-forest/20' : 'bg-surface-raised text-vellum-muted border border-hairline' }}">
-                        {{ $user->employeeProfile?->same_as_current_address ? 'Same as Current Address' : 'Different Address' }}
-                    </span>
-                </div>
-                
-                @if(!$user->employeeProfile?->same_as_current_address)
-                    <div class="flex flex-col">
-                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Address Line 1</span>
-                            <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->permanent_address1 ?? 'N/A' }}</span>
-                        </div>
-                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Address Line 2</span>
-                            <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->permanent_address2 ?? 'N/A' }}</span>
-                        </div>
-                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Country</span>
-                            <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->permanent_country ?? 'N/A' }}</span>
-                        </div>
-                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">State</span>
-                            <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->permanent_state ?? 'N/A' }}</span>
-                        </div>
-                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">City</span>
-                            <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->permanent_city ?? 'N/A' }}</span>
-                        </div>
-                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Zip Code</span>
-                            <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->permanent_zip ?? 'N/A' }}</span>
-                        </div>
-                    </div>
-                @else
-                    <p class="text-sm text-vellum-muted italic">Same as current address details.</p>
-                @endif
-            </div>
-
-            <div>
-                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Bank Registry</h4>
-                <div class="flex flex-col">
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Payment Type</span>
-                        <span class="text-sm font-medium text-vellum capitalize">{{ $user->employeeProfile?->payment_type ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Bank Name</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->bank_name ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Account Holder</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->account_holder_name ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Account Number</span>
-                        <span class="text-sm font-medium text-vellum font-mono select-all">{{ $user->employeeProfile?->account_no ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">IFSC Code</span>
-                        <span class="text-sm font-medium text-brass font-mono uppercase select-all">{{ $user->employeeProfile?->ifsc_code ?? 'N/A' }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Emergency Contact</h4>
-                <div class="flex flex-col">
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Contact Name</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->emergency_name ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Relationship</span>
-                        <span class="text-sm font-medium text-vellum capitalize">{{ $user->employeeProfile?->emergency_relationship ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Address</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->emergency_address ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Email Address</span>
-                        <span class="text-sm font-medium text-vellum select-all">{{ $user->employeeProfile?->emergency_email ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Mobile Phone</span>
-                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->emergency_mobile ?? 'N/A' }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 2: EMPLOYMENT DOSSIER -->
-        <div x-show="activeTab === 'employment'" class="space-y-8" style="display: none;">
-            <div>
+            <!-- EMPLOYMENT -->
+            <div id="employment" x-show="activeSection === 'employment'" class="scroll-mt-6 border-b border-hairline pb-8">
                 <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Employment Profile</h4>
-                <div class="flex flex-col">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                     <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
                         <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Payroll Type</span>
                         <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->payroll_type ?? 'N/A' }}</span>
@@ -318,6 +260,18 @@
                         <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Contract End Date</span>
                         <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->contract_end_date?->format('M d, Y') ?? 'N/A' }}</span>
                     </div>
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Department</span>
+                        <span class="text-sm font-medium text-vellum">{{ $user->department?->name ?? 'N/A' }}</span>
+                    </div>
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Assigned Manager</span>
+                        <span class="text-sm font-medium text-vellum">{{ $user->manager?->name ?? 'None' }}</span>
+                    </div>
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Assigned Admin</span>
+                        <span class="text-sm font-medium text-vellum">{{ $user->admin?->name ?? 'None' }}</span>
+                    </div>
                     @if($user->role !== 'admin')
                         <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
                             <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Leave Balance</span>
@@ -327,9 +281,142 @@
                 </div>
             </div>
 
-            <div>
-                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Government Registry</h4>
-                <div class="flex flex-col">
+            <!-- CONTACT -->
+            <div id="contact" x-show="activeSection === 'contact'" class="scroll-mt-6 border-b border-hairline pb-8">
+                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Contact & Address</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Current Address -->
+                    <div>
+                        <h5 class="text-xs font-bold text-vellum uppercase tracking-wider mb-3">Current Address</h5>
+                        <div class="flex flex-col">
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Line 1</span>
+                                <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->current_address1 ?? 'N/A' }}</span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Line 2</span>
+                                <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->current_address2 ?? 'N/A' }}</span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">City</span>
+                                <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->current_city ?? 'N/A' }}</span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">State</span>
+                                <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->current_state ?? 'N/A' }}</span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Country</span>
+                                <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->current_country ?? 'N/A' }}</span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Zip Code</span>
+                                <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->current_zip ?? 'N/A' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Permanent Address -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h5 class="text-xs font-bold text-vellum uppercase tracking-wider">Permanent Address</h5>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase {{ $user->employeeProfile?->same_as_current_address ? 'bg-forest-bg text-forest border border-forest/10' : 'bg-surface-raised text-vellum-muted border border-hairline' }}">
+                                {{ $user->employeeProfile?->same_as_current_address ? 'Same as Current' : 'Separate' }}
+                            </span>
+                        </div>
+                        <div class="flex flex-col">
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Line 1</span>
+                                <span class="text-sm font-medium text-vellum">
+                                    {{ $user->employeeProfile?->same_as_current_address ? ($user->employeeProfile?->current_address1 ?? 'N/A') : ($user->employeeProfile?->permanent_address1 ?? 'N/A') }}
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Line 2</span>
+                                <span class="text-sm font-medium text-vellum">
+                                    {{ $user->employeeProfile?->same_as_current_address ? ($user->employeeProfile?->current_address2 ?? 'N/A') : ($user->employeeProfile?->permanent_address2 ?? 'N/A') }}
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">City</span>
+                                <span class="text-sm font-medium text-vellum">
+                                    {{ $user->employeeProfile?->same_as_current_address ? ($user->employeeProfile?->current_city ?? 'N/A') : ($user->employeeProfile?->permanent_city ?? 'N/A') }}
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">State</span>
+                                <span class="text-sm font-medium text-vellum">
+                                    {{ $user->employeeProfile?->same_as_current_address ? ($user->employeeProfile?->current_state ?? 'N/A') : ($user->employeeProfile?->permanent_state ?? 'N/A') }}
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Country</span>
+                                <span class="text-sm font-medium text-vellum">
+                                    {{ $user->employeeProfile?->same_as_current_address ? ($user->employeeProfile?->current_country ?? 'N/A') : ($user->employeeProfile?->permanent_country ?? 'N/A') }}
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Zip Code</span>
+                                <span class="text-sm font-medium text-vellum font-mono">
+                                    {{ $user->employeeProfile?->same_as_current_address ? ($user->employeeProfile?->current_zip ?? 'N/A') : ($user->employeeProfile?->permanent_zip ?? 'N/A') }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EMERGENCY CONTACTS -->
+            <div id="emergency" x-show="activeSection === 'emergency'" class="scroll-mt-6 border-b border-hairline pb-8">
+                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Emergency Contact</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Contact Name</span>
+                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->emergency_name ?? 'N/A' }}</span>
+                    </div>
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Relationship</span>
+                        <span class="text-sm font-medium text-vellum capitalize">{{ $user->employeeProfile?->emergency_relationship ?? 'N/A' }}</span>
+                    </div>
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Email Address</span>
+                        <span class="text-sm font-medium text-vellum select-all">{{ $user->employeeProfile?->emergency_email ?? 'N/A' }}</span>
+                    </div>
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Mobile Phone</span>
+                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->emergency_mobile ?? 'N/A' }}</span>
+                    </div>
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center md:col-span-2">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Address</span>
+                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->emergency_address ?? 'N/A' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BANKING & REGISTRY -->
+            <div id="payroll" x-show="activeSection === 'payroll'" class="scroll-mt-6 border-b border-hairline pb-8">
+                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Banking & Government Registries</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Payment Type</span>
+                        <span class="text-sm font-medium text-vellum capitalize">{{ $user->employeeProfile?->payment_type ?? 'N/A' }}</span>
+                    </div>
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Bank Name</span>
+                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->bank_name ?? 'N/A' }}</span>
+                    </div>
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Account Holder</span>
+                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->account_holder_name ?? 'N/A' }}</span>
+                    </div>
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Account Number</span>
+                        <span class="text-sm font-medium text-vellum font-mono select-all">{{ $user->employeeProfile?->account_no ?? 'N/A' }}</span>
+                    </div>
+                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">IFSC Code</span>
+                        <span class="text-sm font-medium text-brass font-mono uppercase select-all">{{ $user->employeeProfile?->ifsc_code ?? 'N/A' }}</span>
+                    </div>
                     <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
                         <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">PF UAN</span>
                         <span class="text-sm font-medium text-vellum font-mono select-all">{{ $user->employeeProfile?->pf_uan ?? 'N/A' }}</span>
@@ -361,98 +448,156 @@
                 </div>
             </div>
 
-            <div>
-                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Tenure & Performance</h4>
-                <div class="flex flex-col">
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Probation Period</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->probation_period ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Probation Confirm Date</span>
-                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->probation_confirm_date?->format('M d, Y') ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Separation Date</span>
-                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->separation_date?->format('M d, Y') ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Last Working Day</span>
-                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->last_working_day?->format('M d, Y') ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Prior Experience</span>
-                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->previous_year_experience ?? 'N/A' }} years</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Years Completed</span>
-                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->years_completed ?? 'N/A' }} years</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Overall Experience</span>
-                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->overall_year_experience ?? 'N/A' }} years</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Hiring Source</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->hiring_source ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Source of Verification</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->source_of_verification ?? 'N/A' }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+            <!-- FUTURE TIMELINE -->
+            <div id="timeline" x-show="activeSection === 'timeline'" class="scroll-mt-6 border-b border-hairline pb-8">
+                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-6">Future Timeline</h4>
+                <div class="relative pl-6 border-l-2 border-hairline space-y-6">
+                    <!-- Milestone: Birthday -->
+                    @if($user->employeeProfile?->date_of_birth)
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-1.5 w-[10px] h-[10px] rounded-full border-2 border-brass bg-canvas"></div>
+                            <div>
+                                <span class="text-xs font-mono font-semibold text-brass">{{ $user->employeeProfile->date_of_birth->format('F d') }}</span>
+                                <h5 class="text-sm font-semibold text-vellum mt-0.5">Upcoming Birthday</h5>
+                                <p class="text-xs text-vellum-muted mt-0.5">Annual celebration milestone. Birthday leave eligibility is dynamically calculated.</p>
+                            </div>
+                        </div>
+                    @endif
 
-        <!-- TAB 3: HISTORY & REQUESTS -->
-        <div x-show="activeTab === 'history'" class="space-y-8" style="display: none;">
-            <div>
-                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Academic Credentials</h4>
-                <div class="flex flex-col">
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Degree Name</span>
-                        <span class="text-sm font-semibold text-vellum">{{ $user->employeeProfile?->degree_name ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Institution Name</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->institution_name ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Passing Year</span>
-                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->passing_year ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Score Percentage</span>
-                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->percentage ?? 'N/A' }}%</span>
+                    <!-- Milestone: Service Anniversary -->
+                    @if($user->joining_date)
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-1.5 w-[10px] h-[10px] rounded-full border-2 border-brass bg-canvas"></div>
+                            <div>
+                                <span class="text-xs font-mono font-semibold text-brass">{{ $user->joining_date->format('F d') }}</span>
+                                <h5 class="text-sm font-semibold text-vellum mt-0.5">Service Anniversary</h5>
+                                <p class="text-xs text-vellum-muted mt-0.5">Celebration of employee's original joining date ({{ $user->joining_date->format('Y-m-d') }}).</p>
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- Milestone: Contract Renewal / End -->
+                    @if($user->employeeProfile?->contract_end_date)
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-1.5 w-[10px] h-[10px] rounded-full border-2 border-brass bg-canvas"></div>
+                            <div>
+                                <span class="text-xs font-mono font-semibold text-brass">{{ $user->employeeProfile->contract_end_date->format('M d, Y') }}</span>
+                                <h5 class="text-sm font-semibold text-vellum mt-0.5">Contract End / Renewal Date</h5>
+                                <p class="text-xs text-vellum-muted mt-0.5">Scheduled tenure checkpoint and contract validation review.</p>
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- Milestone: Annual Review -->
+                    <div class="relative">
+                        <div class="absolute -left-[31px] top-1.5 w-[10px] h-[10px] rounded-full border-2 border-brass bg-canvas"></div>
+                        <div>
+                            <span class="text-xs font-mono font-semibold text-brass">October 01, 2026</span>
+                            <h5 class="text-sm font-semibold text-vellum mt-0.5">Annual Performance Audit</h5>
+                            <p class="text-xs text-vellum-muted mt-0.5">System-wide workforce review and structural alignment ledger evaluation.</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div>
-                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Previous Employment</h4>
-                <div class="flex flex-col">
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Previous Company</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->previous_company_name ?? 'N/A' }}</span>
+            <!-- CAREER HISTORY -->
+            <div id="history" x-show="activeSection === 'history'" class="scroll-mt-6 border-b border-hairline pb-8">
+                <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Academic & Career History</h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                    <!-- Academic Credentials -->
+                    <div>
+                        <h5 class="text-xs font-bold text-vellum uppercase tracking-wider mb-3">Academic Credentials</h5>
+                        <div class="flex flex-col">
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Degree Name</span>
+                                <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->degree_name ?? 'N/A' }}</span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Institution</span>
+                                <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->institution_name ?? 'N/A' }}</span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Passing Year</span>
+                                <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->passing_year ?? 'N/A' }}</span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Score</span>
+                                <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->percentage ? ($user->employeeProfile->percentage . '%') : 'N/A' }}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Job Title</span>
-                        <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->previous_job_title ?? 'N/A' }}</span>
+
+                    <!-- Previous Employment -->
+                    <div>
+                        <h5 class="text-xs font-bold text-vellum uppercase tracking-wider mb-3">Previous Employment</h5>
+                        <div class="flex flex-col">
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Company</span>
+                                <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->previous_company_name ?? 'N/A' }}</span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">Job Title</span>
+                                <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->previous_job_title ?? 'N/A' }}</span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">From Date</span>
+                                <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->previous_from_date?->format('M d, Y') ?? 'N/A' }}</span>
+                            </div>
+                            <div class="grid grid-cols-[150px_1fr] py-2 border-b border-hairline last:border-none items-center">
+                                <span class="text-[11px] font-semibold text-vellum-faint uppercase tracking-wider">To Date</span>
+                                <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->previous_to_date?->format('M d, Y') ?? 'N/A' }}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">From Date</span>
-                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->previous_from_date?->format('M d, Y') ?? 'N/A' }}</span>
-                    </div>
-                    <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
-                        <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">To Date</span>
-                        <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->previous_to_date?->format('M d, Y') ?? 'N/A' }}</span>
+                </div>
+
+                <div class="border-t border-hairline pt-6">
+                    <h5 class="text-xs font-bold text-vellum uppercase tracking-wider mb-3">Tenure & Performance</h5>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Probation Period</span>
+                            <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->probation_period ?? 'N/A' }}</span>
+                        </div>
+                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Probation Confirm Date</span>
+                            <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->probation_confirm_date?->format('M d, Y') ?? 'N/A' }}</span>
+                        </div>
+                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Separation Date</span>
+                            <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->separation_date?->format('M d, Y') ?? 'N/A' }}</span>
+                        </div>
+                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Last Working Day</span>
+                            <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->last_working_day?->format('M d, Y') ?? 'N/A' }}</span>
+                        </div>
+                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Prior Experience</span>
+                            <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->previous_year_experience ?? 'N/A' }} years</span>
+                        </div>
+                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Years Completed</span>
+                            <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->years_completed ?? 'N/A' }} years</span>
+                        </div>
+                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Overall Experience</span>
+                            <span class="text-sm font-medium text-vellum font-mono">{{ $user->employeeProfile?->overall_year_experience ?? 'N/A' }} years</span>
+                        </div>
+                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Hiring Source</span>
+                            <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->hiring_source ?? 'N/A' }}</span>
+                        </div>
+                        <div class="grid grid-cols-[200px_1fr] py-3 border-b border-hairline last:border-none items-center">
+                            <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Verification Source</span>
+                            <span class="text-sm font-medium text-vellum">{{ $user->employeeProfile?->source_of_verification ?? 'N/A' }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Profile Correction Requests Section -->
+            <!-- PROFILE CORRECTION REQUESTS -->
             @if(auth()->user()->id === $user->id || auth()->user()->role === 'admin')
-                <div>
+                <div id="corrections" x-show="activeSection === 'corrections'" class="scroll-mt-6">
                     <h4 class="text-sm font-semibold text-brass uppercase tracking-wider mb-4">Profile Correction Requests</h4>
 
                     @php
@@ -493,6 +638,7 @@
                     @endif
                 </div>
             @endif
+
         </div>
     </x-dossier-layout>
 
@@ -543,4 +689,3 @@
             </div>
         </form>
     </x-modal>
-</div>

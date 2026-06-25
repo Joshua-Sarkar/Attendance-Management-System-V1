@@ -1,12 +1,12 @@
-<x-app-layout>
+<x-workflow-layout>
     <x-slot name="header">
-        <h1 class="font-display font-medium text-[26px] tracking-wide text-vellum">Add Workforce Member</h1>
+        <h1 class="font-display font-medium text-[32px] tracking-wide text-vellum">Add Workforce Member</h1>
+        <div class="text-[13px] text-vellum-muted mt-1.5 tracking-wide">
+            Create a new personnel profile in the organization directory
+        </div>
     </x-slot>
 
-    <div class="py-6">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div class="panel">
-                <div class="p-6">
+    <div class="space-y-6">
 
                     <form method="POST" action="{{ route('employees.store') }}">
                         @csrf
@@ -506,7 +506,7 @@
                                 <div class="mt-4">
                                     <label class="inline-flex items-center mb-4">
                                         <input type="checkbox" name="same_as_current_address" id="same_as_current_address" value="1" {{ old('same_as_current_address') ? 'checked' : '' }} class="rounded border-hairline bg-surface-raised text-brass focus:ring-brass focus:ring-offset-0 focus:outline-none">
-                                        <span class="ml-2 text-sm text-gray-600">Same as Current Address</span>
+                                        <span class="ml-2 text-sm text-vellum-muted">Same as Current Address</span>
                                     </label>
                                     
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -775,25 +775,15 @@
                         </script>
 
                         <div class="mt-6 flex items-center gap-3">
-                            <button
-                                type="submit"
-                                class="inline-flex items-center px-4 py-2.5 bg-brass hover:bg-brass/90 text-canvas font-bold uppercase tracking-widest rounded-md text-xs transition duration-200 shadow-md focus:outline-none"
-                            >
+                            <x-primary-button type="submit">
                                 Add Member
-                            </button>
+                            </x-primary-button>
 
-                            <a
-                                href="{{ route('employees.index') }}"
-                                class="inline-flex items-center px-4 py-2.5 bg-surface-raised hover:bg-surface-raised/80 text-vellum font-semibold border border-hairline uppercase tracking-widest rounded-md text-xs transition duration-200"
-                            >
+                            <x-secondary-button onclick="window.location.href='{{ route('employees.index') }}'">
                                 Cancel
-                            </a>
+                            </x-secondary-button>
                         </div>
 
                     </form>
-
-                </div>
-            </div>
-        </div>
     </div>
-</x-app-layout>
+</x-workflow-layout>

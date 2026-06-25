@@ -33,64 +33,93 @@
     <!-- Ledger Table content inside ledger wrapper -->
     <x-slot name="ledgerHeader">
         <h2>Last 30 Days</h2>
-        <div class="meta">attendance log</div>
+        <div class="meta font-mono text-[11px] text-vellum-faint font-medium">attendance log</div>
     </x-slot>
 
-    @forelse ($history as $record)
-        @php
-            $dateStr = $record->date->format('M d, Y');
-            $dayName = $record->date->format('l');
-            $checkInStr = $record->check_in_time ? $record->check_in_time->timezone('Asia/Kolkata')->format('h:i A') : '—';
-            $checkOutStr = $record->check_out_time ? $record->check_out_time->timezone('Asia/Kolkata')->format('h:i A') : '—';
-            
-            $durationStr = '';
-            if ($record->check_in_time && $record->check_out_time) {
-                $hrs = $record->check_in_time->diffInMinutes($record->check_out_time, absolute: true) / 60.0;
-                $durationStr = ' · ' . number_format($hrs, 1) . 'h worked';
-            }
-            
-            $desc = '';
-            if ($record->status === 'present') {
-                $desc = 'Checked in at ' . $checkInStr . ' · Checked out at ' . $checkOutStr . $durationStr;
-            } elseif ($record->status === 'late') {
-                $desc = 'Checked in late at ' . $checkInStr . ' · ' . $record->late_minutes . 'm past grace' . $durationStr;
-            } elseif ($record->status === 'on_leave') {
-                $desc = 'Approved leave';
-            } elseif ($record->status === 'wfh') {
-                $desc = 'Working from home' . $durationStr;
-            } else {
-                $desc = 'No check-in recorded';
-            }
-        @endphp
-        <div class="ledger-row grid grid-cols-[24px_110px_1fr_120px] items-center py-4 px-2 border-b border-hairline last:border-none hover:bg-brass/[0.04] transition duration-150">
-            <span class="seal-indicator {{ $record->status }} w-2 h-2 rounded-full 
-                @if($record->status === 'present' || $record->status === 'wfh') bg-forest
-                @elseif($record->status === 'late') bg-cognac
-                @elseif($record->status === 'on_leave' || $record->status === 'leave') bg-slate
-                @else bg-burgundy @endif"></span>
-            <span class="row-time font-mono text-[13px] text-vellum">{{ $dateStr }}</span>
-            <div class="row-identity flex flex-col gap-0.5">
-                <span class="row-name text-[14.0px] font-semibold text-vellum">
+    @php
+        $headers = [
+            ['label' => 'Date', 'class' => ''],
+            ['label' => 'Day', 'class' => ''],
+            ['label' => 'Check In', 'class' => ''],
+            ['label' => 'Check Out', 'class' => ''],
+            ['label' => 'Details', 'class' => ''],
+            ['label' => 'Status', 'class' => 'text-right']
+        ];
+    @endphp
+
+    <x-ledger-table :headers="$headers">
+        @forelse ($history as $record)
+            @php
+                $dateStr = $record->date->format('M d, Y');
+                $dayName = $record->date->format('l');
+                $checkInStr = $record->check_in_time ? $record->check_in_time->timezone('Asia/Kolkata')->format('h:i A') : '—';
+                $checkOutStr = $record->check_out_time ? $record->check_out_time->timezone('Asia/Kolkata')->format('h:i A') : '—';
+                
+                $durationStr = '';
+                if ($record->check_in_time && $record->check_out_time) {
+                    $hrs = $record->check_in_time->diffInMinutes($record->check_out_time, absolute: true) / 60.0;
+                    $durationStr = number_format($hrs, 1) . 'h worked';
+                }
+                
+                $details = '—';
+                if ($record->status === 'late') {
+                    $details = $record->late_minutes . 'm past grace' . ($durationStr ? ' · ' . $durationStr : '');
+                } elseif ($record->status === 'on_leave' || $record->status === 'leave') {
+                    $details = 'Approved leave';
+                } elseif ($record->status === 'wfh') {
+                    $details = 'Working from home' . ($durationStr ? ' · ' . $durationStr : '');
+                } elseif ($record->status === 'present') {
+                    $details = $durationStr ?: 'Checked in';
+                } elseif ($record->status === 'absent') {
+                    $details = 'No check-in recorded';
+                }
+            @endphp
+            <tr class="hover:bg-brass/[0.04] transition duration-150 text-[16px]">
+                <!-- Date -->
+                <td class="py-4 px-4 font-mono text-[16px] text-brass select-all font-medium">
+                    {{ $dateStr }}
+                </td>
+
+                <!-- Day -->
+                <td class="py-4 px-4 text-[18px] font-bold text-vellum">
                     {{ $dayName }}
-                </span>
-                <span class="row-desc text-[12px] text-vellum-muted">{{ $desc }}</span>
-            </div>
-            <div class="text-right">
-                <span class="tag {{ $record->status }} text-[11px] font-mono uppercase tracking-[0.8px] px-2.5 py-1 rounded border
-                    @if($record->status === 'present') bg-forest-bg text-forest border-transparent
-                    @elseif($record->status === 'late') bg-cognac-bg text-cognac border-transparent
-                    @elseif($record->status === 'on_leave' || $record->status === 'leave') bg-slate-bg text-slate border-transparent
-                    @elseif($record->status === 'wfh') bg-forest-bg text-forest border-transparent
-                    @else bg-burgundy-bg text-burgundy border-transparent @endif">
-                    @if($record->status === 'on_leave') Leave @else {{ str_replace('_', ' ', $record->status) }} @endif
-                </span>
-            </div>
-        </div>
-    @empty
-        <div class="empty-cta py-8 text-center text-vellum-faint border border-dashed border-hairline-strong rounded mt-1 text-[12px]">
-            No attendance records found.
-        </div>
-    @endforelse
+                </td>
+
+                <!-- Check In -->
+                <td class="py-4 px-4 text-[16px] text-vellum-muted font-mono">
+                    {{ $checkInStr }}
+                </td>
+
+                <!-- Check Out -->
+                <td class="py-4 px-4 text-[16px] text-vellum-muted font-mono">
+                    {{ $checkOutStr }}
+                </td>
+
+                <!-- Details -->
+                <td class="py-4 px-4 text-[16px] text-vellum-muted">
+                    {{ $details }}
+                </td>
+
+                <!-- Status -->
+                <td class="py-4 px-4 text-right">
+                    <span class="tag {{ $record->status }} text-[11px] font-mono uppercase tracking-[0.8px] px-2.5 py-0.5 rounded border
+                        @if($record->status === 'present') bg-forest-bg text-forest border-transparent
+                        @elseif($record->status === 'late') bg-cognac-bg text-cognac border-transparent
+                        @elseif($record->status === 'on_leave' || $record->status === 'leave') bg-slate-bg text-slate border-transparent
+                        @elseif($record->status === 'wfh') bg-forest-bg text-forest border-transparent
+                        @else bg-burgundy-bg text-burgundy border-transparent @endif">
+                        @if($record->status === 'on_leave') Leave @else {{ str_replace('_', ' ', $record->status) }} @endif
+                    </span>
+                </td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="6" class="py-8 text-center text-vellum-faint border border-dashed border-hairline-strong rounded mt-1 text-[13px]">
+                    No attendance records found.
+                </td>
+            </tr>
+        @endforelse
+    </x-ledger-table>
 </x-ledger-layout>
 
 <div class="mt-6 max-w-[1180px] mx-auto px-11 pb-8">

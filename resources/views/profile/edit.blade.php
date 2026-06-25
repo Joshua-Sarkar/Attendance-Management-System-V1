@@ -1,27 +1,22 @@
-<x-app-layout wide>
+<x-workflow-layout>
     <x-slot name="header">
-        <h1 class="font-display font-medium text-[26px] tracking-wide text-vellum">Profile</h1>
+        <h1 class="font-display font-medium text-[32px] tracking-wide text-vellum">{{ __('Profile') }}</h1>
+        <div class="text-[13px] text-vellum-muted mt-1.5 tracking-wide">
+            Manage your credentials and account configurations
+        </div>
     </x-slot>
 
-    <div class="py-6 space-y-6">
-        <div class="max-w-7xl mx-auto space-y-6">
-            <div class="panel">
-                <div class="max-w-xl">
-                    @include('profile.partials.update-profile-information-form')
-                </div>
-            </div>
+    <div class="space-y-10">
+        <div class="border-b border-hairline pb-8">
+            @include('profile.partials.update-profile-information-form')
+        </div>
 
-            <div class="panel">
-                <div class="max-w-xl">
-                    @include('profile.partials.update-password-form')
-                </div>
-            </div>
+        <div class="border-b border-hairline pb-8">
+            @include('profile.partials.update-password-form')
+        </div>
 
-            <div class="panel">
-                <div class="max-w-xl">
-                    @include('profile.partials.delete-user-form')
-                </div>
-            </div>
+        <div>
+            @include('profile.partials.delete-user-form')
         </div>
     </div>
-</x-app-layout>
+</x-workflow-layout>
