@@ -6,10 +6,9 @@ This document provides a lightweight operational snapshot of the Attendance Mana
 
 ## 1. System Metadata & Snapshot
 
-* **Current version:** `v1.2-phase-4.7.3`
-* **Current Phase:** Phase 4.8 — Executive UI Overhaul (in progress)
-* **Latest Release Tag:** `v1.2-phase-4.7.3` (pointing to commit `716bd4a`)
-* **Latest Commit:** `40dce91` (`docs(consolidation): consolidate UI architecture planning documents`)
+* **Current version:** `v1.2-phase-4.8.0`
+* **Current Phase:** Phase 4.8 — Executive UI Overhaul (Completed)
+* **Latest Release Tag:** `v1.2-phase-4.8.0`
 * **Current Branch:** `main`
 
 ---
@@ -17,21 +16,19 @@ This document provides a lightweight operational snapshot of the Attendance Mana
 ## 2. Codebase Health & Test Metrics
 
 * **Automated Test Suite:** SQLite in-memory Pest tests configuration.
-* **Test Status:** **100% PASS** (102 tests, 546 assertions verified).
-* **Code Coverage:** Full coverage across leave ledger transactions, clocking grace delay calculations, supervisor RBAC scopes, Excel parser two-pass mappings, and profile correction queues.
+* **Test Status:** **100% PASS** (103 tests, 548 assertions verified).
+* **Code Coverage:** Full coverage across leave ledger transactions, birthday credit grants, supervisor RBAC scopes, Excel uploader hierarchy logic, and profile correction queues.
 
 ---
 
 ## 3. Operations & Priorities Roadmap
 
 * **Active Priorities:**
-  1. Unify navigation and settings dropdown menus colors (`docs/UI_OVERHAUL_SPEC.md`).
-  2. Standardize page layouts to custom gold width wrappers.
-  3. Migrate leaves approval/rejection overlays to Alpine modal frames.
-  4. Create a styled `<x-select-input>` custom component.
+  1. Complete pre-deployment checklist for Phase 4.8 Release Candidate launch.
+  2. Implement Phase 5: Payroll Integration algorithms (calculate unpaid hours based on check-in logs and unpaid leaves).
 * **Known Risks:**
   - Database schema changes in future phases require daily Hostinger backups execution via cPanel.
-  - Custom inline select dropdown blocks could trigger minor layout shift reflows.
+  - Web deployments must verify directory symlinks cache triggers.
 
 ---
 

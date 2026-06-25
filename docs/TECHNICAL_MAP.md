@@ -277,8 +277,16 @@ erDiagram
 * **Table:** `leave_credits` (Tracks allocated special leave credits)
   * `id` (`bigint unsigned`, PK): Unique identifier.
   * `user_id` (`bigint unsigned`, FK -> `users.id`, ON DELETE CASCADE).
-  * `amount` / `used_amount` (`decimal(8,2)`), `status` (`varchar(50)`).
+  * `credit_type` (`varchar(255)`): Type of credit (e.g. `'birthday'`).
+  * `amount` (`decimal(8,2)`, Default: `1.00`): Granted amount.
+  * `used_amount` (`decimal(8,2)`, Default: `0.00`): Consumed amount.
+  * `status` (`varchar(50)`, Default: `'active'`): Status flag (`active`, `expired`, `voided`).
+  * `unlocked_at` (`date`): Validity start date.
+  * `expires_at` (`date`): Expiry date.
   * `source_identifier` (`varchar(255)`): Unique token per employee cycle (e.g. `'birthday_2026'`).
+  * `granted_by` (`bigint unsigned`, Nullable, FK -> `users.id`, ON DELETE SET NULL).
+  * `notes` (`text`, Nullable): Remarks.
+  * `source_metadata` (`json`, Nullable): Diagnostic fields.
 
 #### D. Verification Suite
 * **Test File:** [LeaveManagementTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/LeaveManagementTest.php)

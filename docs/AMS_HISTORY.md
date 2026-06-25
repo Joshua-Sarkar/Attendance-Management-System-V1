@@ -25,6 +25,7 @@ The table below maps the development timeline, indicating completion commits, in
 | 13 | **Phase 4.7** | `e00d32b` | None | `v1.2-docs-baseline` | **Architecture Traceability & Consolidation:** Retrospective audit establishing documentation maps and ADR logs. |
 | 14 | **Phase 4.7.2** | `70cd6cc` | None | `v1.2-phase-4.7.2` | **Leave Authorization System:** Reusable credits engine, planned/unplanned types, birthday credit sync, and approval-driven attendance. |
 | 15 | **Phase 4.7.3** | `c5a0652` (Code) | `ff023b2`, `d88d3d4`, `89d9987`, `d8bc202` | `v1.2-phase-4.7.3` | **Readability & Usability Pass:** Standardized table padding, hovers, list alignments, and desaturated tags. Skinned inputs to dark theme. |
+| 16 | **Phase 4.8** | `v1.2-phase-4.8.0` | `4f87741`, `60de647`, `0f9907b` | `v1.2-phase-4.8.0` | **Release Candidate UI Overhaul & Polish:** Standardized all 7 organizational registries to a unified `<x-ledger-table>` ledger grid. Deduplicated action triggers from the Employee Dossier header (relocating all controls to the right-hand summary card). Centered action buttons horizontally next to the title headings. Fixed local test temp file offsets. |
 
 ---
 
@@ -77,6 +78,9 @@ git tag -a v1.2-phase-4.7.2 70cd6cc -m "Phase 4.7.2 complete - Reusable leave cr
 
 # Phase 4.7.3 (Readability & Usability Pass)
 git tag -a v1.2-phase-4.7.3 716bd4a -m "Phase 4.7.3 complete - Readability & Usability Pass"
+
+# Phase 4.8 (Release Candidate UI Overhaul & Polish)
+git tag -a v1.2-phase-4.8.0 -m "Phase 4.8 complete - Unified ledger grids across Workforce, Departments, Leaves, Attendance and Correction Requests registries, header action button vertical alignments, Employee Dossier cleanup, and test warnings remediation"
 ```
 
 ---

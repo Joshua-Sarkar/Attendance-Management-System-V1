@@ -19,11 +19,11 @@ This document serves as the primary entry point for developers, maintainers, aud
 
 ## 2. Current Snapshot
 
-* **Current Version:** `v1.2-phase-4.7.3`
-* **Latest Release Tag:** `v1.2-phase-4.7.3`
+* **Current Version:** `v1.2-phase-4.8.0`
+* **Latest Release Tag:** `v1.2-phase-4.8.0`
 * **Documentation Baseline Tag:** `v1.2-docs-baseline` (pointing to Phase 4.7 consolidation commit)
 * **Current Branch:** `main`
-* **Latest Commit:** `716bd4a` (`docs(release): reconcile metadata, build Phase 4.8 readiness report, and prepare tag`)
+* **Latest Commit:** `v1.2-phase-4.8.0`
 * **Production URL:** Hostinger production directory root (cPanel mappings active)
 * **Production Database:** MySQL 8.0
 * **Current Deployment Environment:** Linux Shared Web Server (Hostinger PHP 8.2 runtime)
@@ -159,16 +159,15 @@ Currently, there are no known critical issues. The application has 100% test cov
 
 ---
 
-* **Active Phase:** Phase 4.8 — Executive UI Overhaul (in progress).
-* **Last Completed Phase:** Phase 4.7.3 (Readability & Usability Pass).
-* **Next Planned Phase:** **Phase 5 — Payroll Integration** (Deferred).
+* **Active Phase:** Phase 5 — Payroll Integration (Deferred).
+* **Last Completed Phase:** Phase 4.8 — Executive UI Overhaul.
+* **Next Planned Phase:** **Phase 5 — Payroll Integration**.
 
 ---
 
 ## 9. Immediate Next Priorities
 
-1. **Phase 4.8 (Executive UI Overhaul):** Redesign dashboard widgets, unify dropdown menu architectures, and standardise layout grids.
-2. **Phase 5 (Payroll Module):** Create calculation algorithms to determine unpaid hours based on check-in logs and unpaid leaves, mapping outputs into downloadable payslips (Deferred).
+1. **Phase 5 (Payroll Module):** Create calculation algorithms to determine unpaid hours based on check-in logs and unpaid leaves, mapping outputs into downloadable payslips.
 
 ---
 
@@ -210,5 +209,5 @@ Then, review these files in order:
 
 Treat the project documentation inside `/docs` as the source of truth for the codebase.
 
-The current target task is to initiate Phase 4.8 — Executive UI Overhaul. Review the handover roadmap and wait for further instructions.
+The current target task is to initiate Phase 5 — Payroll Integration. Review the handover roadmap and wait for further instructions.
 ```

@@ -387,3 +387,32 @@ Implement Option A. The `status` field on `attendances` resolves dynamically: ap
   * [AttendanceService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceService.php) (attendance resolver)
 * **Related Release:** Phase 4.7.2 (`v1.2-phase-4.7.2` completion)
 
+---
+
+## ADR 15: Unified Ledger Table Component & Page Header Layout Locks
+
+### Problem
+Registry listings across Workforce, Departments, Leaves, Correction Requests, and Attendance logs had structural inconsistencies. Some used custom flex grids, others used custom raw HTML tables with differing cell padding, typography, hover transitions, and action column alignments. Furthermore, page action buttons (e.g. Add Workforce Member, Create Department) had inconsistent vertical centering, and the Employee Dossier had duplicate action triggers across its header and sidebar cards.
+
+### Context
+To maintain a high-density, Excel-like administrative visual language, all registry pages must behave consistently as horizontal ledgers. They should share identical header spacing, action button positioning (centered horizontally next to the title), typography sizes (Primary name/subject at 18px bold, metadata columns at 16px, header labels at 13-14px uppercase), and transition hover states.
+
+### Alternatives Considered
+* **Option A: Page-specific Style Patches:** Apply custom utility classes on each individual view template to fix margins and vertical paddings.
+  * *Trade-off:* High maintenance overhead; developers could easily introduce visual regressions when adding new registries or modifying existing columns.
+* **Option B: Shared Ledger Table Component & Header Structure locks (Chosen):** Enforce the usage of a reusable `<x-ledger-table>` Blade component across all registries. Lock the header slots into a consistent hierarchy (Title, Subtitle, adjacent Primary Action Button, Clock widget on right, and Divider).
+
+### Chosen Solution
+Implement Option B. Standardized the `<x-ledger-table>` component to wrap layout tables. Rebuilt the 7 major registry lists (Workforce, Departments, Department Members, Leaves, Attendance History, Attendance Logs, and Correction Requests) to inherit this table layout. Standardized all primary action buttons to be vertically centered next to the main page titles (using inline flex and spacing) and removed duplicate action triggers from the Employee Dossier header (relocating all actions exclusively to the right-hand metadata summary card). Enforced global select element styling in `resources/css/app.css` to fix double-arrow rendering bugs.
+
+### Consequences
+* **Positive:** Uniform visual alignment across the entire application, consistent responsive scaling (clipping columns gracefully on mobile/tablet viewports), single source of truth for table layout templates, and clean, clutter-free Employee Dossier.
+* **Negative:** Adding custom action columns or multi-line cell layouts in the future requires overriding column classes or writing custom components.
+* **Related Files:**
+  * [app.css](file:///c:/Users/Lenovo/AMS-V1/resources/css/app.css) (select dropdowns visual overrides)
+  * [ledger-table.blade.php](file:///c:/Users/Lenovo/AMS-V1/resources/views/components/ledger-table.blade.php) (table component)
+  * [show.blade.php](file:///c:/Users/Lenovo/AMS-V1/resources/views/employees/show.blade.php) (employee dossier view)
+  * [index.blade.php](file:///c:/Users/Lenovo/AMS-V1/resources/views/employees/index.blade.php) (workforce index)
+* **Related Release:** Phase 4.8 (`v1.2-phase-4.8.0` completion)
+
+
