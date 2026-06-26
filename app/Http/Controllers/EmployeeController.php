@@ -15,7 +15,8 @@ class EmployeeController extends Controller
 {
     public function __construct(
         protected EmployeeService $employeeService
-    ) {}
+    ) {
+    }
 
     // =========================================================
     // Index — list all employees
@@ -32,7 +33,7 @@ class EmployeeController extends Controller
 
         if ($currentUser->role === 'manager') {
             $query->where('role', 'employee')
-                  ->where('manager_id', $currentUser->id);
+                ->where('manager_id', $currentUser->id);
         }
 
         // Search: Name, Email, Employee ID
@@ -40,8 +41,8 @@ class EmployeeController extends Controller
             $search = trim($request->input('search'));
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('employee_id', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('employee_id', 'like', "%{$search}%");
             });
         }
 
@@ -57,7 +58,7 @@ class EmployeeController extends Controller
         // Sorting
         $sortBy = $request->input('sort_by', 'created_at');
         $sortDir = $request->input('sort_dir', 'desc');
-        
+
         $allowedSorts = ['name', 'employee_id', 'email', 'status', 'created_at', 'joining_date'];
         if (in_array($sortBy, $allowedSorts)) {
             $query->orderBy($sortBy, $sortDir === 'desc' ? 'desc' : 'asc');
@@ -71,9 +72,9 @@ class EmployeeController extends Controller
         // For filter dropdowns
         $departments = Department::orderBy('name')->get();
         $managers = User::whereIn('role', ['manager', 'admin'])
-                        ->where('status', 'active')
-                        ->orderBy('name')
-                        ->get();
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
 
         return view('employees.index', compact('employees', 'departments', 'managers'));
     }
@@ -93,15 +94,15 @@ class EmployeeController extends Controller
 
         // Active managers
         $managers = User::where('role', 'manager')
-                        ->where('status', 'active')
-                        ->orderBy('name')
-                        ->get();
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
 
         // Active admins
         $admins = User::where('role', 'admin')
-                      ->where('status', 'active')
-                      ->orderBy('name')
-                      ->get();
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
 
         $suggestedEmployeeId = $this->generateEmployeeId();
 
@@ -125,11 +126,11 @@ class EmployeeController extends Controller
         }
 
         $rules = [
-            'name'          => ['required', 'string', 'max:100'],
-            'email'         => ['required', 'email',  'max:150', 'unique:users,email'],
-            'status'        => ['required', 'string', 'in:active,inactive,resigned'],
-            'phone'         => ['nullable', 'string', 'max:20'],
-            'joining_date'  => ['nullable', 'date'],
+            'name' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:150', 'unique:users,email'],
+            'status' => ['required', 'string', 'in:active,inactive,resigned'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'joining_date' => ['nullable', 'date'],
             'department_id' => ['required', 'exists:departments,id'],
         ];
 
@@ -243,7 +244,7 @@ class EmployeeController extends Controller
         $validated['employee_id'] = $this->generateEmployeeId();
 
         // Automatically assign the default employee password
-        $tempPassword = env('DEFAULT_EMPLOYEE_PASSWORD');
+        $tempPassword = config('employees.default_employee_password');
         if (empty($tempPassword)) {
             return back()->withErrors(['password' => 'The DEFAULT_EMPLOYEE_PASSWORD environment variable is not configured.'])->withInput();
         }
@@ -356,16 +357,16 @@ class EmployeeController extends Controller
         }
 
         $departments = Department::orderBy('name')->get();
-        
+
         $managers = User::where('role', 'manager')
-                        ->where('status', 'active')
-                        ->where('id', '!=', $user->id)
-                        ->get();
+            ->where('status', 'active')
+            ->where('id', '!=', $user->id)
+            ->get();
 
         $admins = User::where('role', 'admin')
-                      ->where('status', 'active')
-                      ->where('id', '!=', $user->id)
-                      ->get();
+            ->where('status', 'active')
+            ->where('id', '!=', $user->id)
+            ->get();
 
         return view('employees.edit', compact('user', 'departments', 'managers', 'admins'));
     }
@@ -386,13 +387,13 @@ class EmployeeController extends Controller
 
         $rules = [
             'employee_id' => ['required', 'string', 'max:50', Rule::unique('users')->ignore($user->id)],
-            'name'        => ['required', 'string', 'max:255'],
-            'email'       => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'password'    => ['nullable', 'string', 'min:8', 'confirmed'],
-            'phone'       => ['nullable', 'string', 'max:20'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'phone' => ['nullable', 'string', 'max:20'],
             'joining_date' => ['nullable', 'date'],
             'department_id' => ['required', 'exists:departments,id'],
-            'status'      => ['required', 'in:active,inactive,resigned'],
+            'status' => ['required', 'in:active,inactive,resigned'],
         ];
 
         if ($currentUser->role === 'admin') {
@@ -588,7 +589,7 @@ class EmployeeController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $defaultPassword = env('DEFAULT_EMPLOYEE_PASSWORD');
+        $defaultPassword = config('employees.default_employee_password');
         if (empty($defaultPassword)) {
             return back()->withErrors(['password' => 'The DEFAULT_EMPLOYEE_PASSWORD environment variable is not configured.']);
         }

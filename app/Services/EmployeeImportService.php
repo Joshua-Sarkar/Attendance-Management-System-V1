@@ -21,7 +21,7 @@ class EmployeeImportService
      */
     public function import(string $filePath): array
     {
-        $defaultPassword = env('DEFAULT_EMPLOYEE_PASSWORD');
+        $defaultPassword = config('employees.default_employee_password');
         if (empty($defaultPassword)) {
             throw new \Exception("The DEFAULT_EMPLOYEE_PASSWORD environment variable is not configured. Please set it before importing.");
         }
@@ -53,7 +53,7 @@ class EmployeeImportService
                     $headerCounts[$name] = 0;
                 }
                 $headerCounts[$name]++;
-                
+
                 $key = $name;
                 if ($headerCounts[$name] > 1) {
                     $key = $name . '.' . ($headerCounts[$name] - 1);
@@ -240,7 +240,7 @@ class EmployeeImportService
                     'biometric_id' => $this->getVal($row, $headersMap, ['Biometric Id', 'Biometric ID']),
                     'hiring_source' => $this->getVal($row, $headersMap, ['Hiring source', 'Hiring Source']),
                     'source_of_verification' => $this->getVal($row, $headersMap, ['Source of verification']),
-                    
+
                     // Address fields
                     'current_address1' => $this->getVal($row, $headersMap, ['Current Address1', 'Address1']),
                     'current_address2' => $this->getVal($row, $headersMap, ['Current Address2', 'Address2']),
@@ -248,28 +248,28 @@ class EmployeeImportService
                     'current_state' => $this->getVal($row, $headersMap, ['State'], 1),
                     'current_city' => $this->getVal($row, $headersMap, ['City'], 1),
                     'current_zip' => $this->getVal($row, $headersMap, ['Zip'], 1),
-                    
+
                     'permanent_address1' => $this->getVal($row, $headersMap, ['Permanent Address1']),
                     'permanent_address2' => $this->getVal($row, $headersMap, ['Permanent Address2']),
                     'permanent_country' => $this->getVal($row, $headersMap, ['Country'], 2),
                     'permanent_state' => $this->getVal($row, $headersMap, ['State'], 2),
                     'permanent_city' => $this->getVal($row, $headersMap, ['City'], 2),
                     'permanent_zip' => $this->getVal($row, $headersMap, ['Zip'], 2),
-                    
+
                     'same_as_current_address' => $this->parseBoolean($this->getVal($row, $headersMap, ['Same as current address'])),
                     'payment_type' => $this->getVal($row, $headersMap, ['Payment Type']),
                     'bank_name' => $this->getVal($row, $headersMap, ['Bank Name']),
                     'account_holder_name' => $this->getVal($row, $headersMap, ['Account Holder Name']),
                     'account_no' => $this->getVal($row, $headersMap, ['Account No', 'Account Number']),
                     'ifsc_code' => $this->getVal($row, $headersMap, ['IFSC code', 'IFSC']),
-                    
+
                     // Emergency contacts
                     'emergency_name' => $this->getVal($row, $headersMap, ['Emergency Contact Name', 'Emergency Name', 'Name'], 2),
                     'emergency_relationship' => $this->getVal($row, $headersMap, ['Emergency Relationship', 'Relationship'], 2),
                     'emergency_address' => $this->getVal($row, $headersMap, ['Emergency Contact Address', 'Emergency Address', 'Address'], 2),
                     'emergency_email' => $this->getVal($row, $headersMap, ['Emergency Contact Email', 'Emergency Email', 'Email'], 2),
                     'emergency_mobile' => $this->cleanPhoneNumber($this->getVal($row, $headersMap, ['Emergency Contact Mobile', 'Emergency Mobile', 'Mobile No.'], 2)),
-                    
+
                     // Education & Experience
                     'degree_name' => $this->getVal($row, $headersMap, ['Diploma/Degree Name', 'Degree Name']),
                     'institution_name' => $this->getVal($row, $headersMap, ['Institution Name', 'College/School Name']),
@@ -321,13 +321,13 @@ class EmployeeImportService
                     // 1. Try parentheses match, e.g. "Name (EMP00001)" or "Name (1)"
                     if (preg_match('/\(([^)]+)\)/', $managerCol, $matches)) {
                         $extractedCode = trim($matches[1]);
-                        
+
                         // Try matching standardized employee code (e.g. EMP00001)
                         $stdCode = $this->standardizeEmployeeId($extractedCode);
                         $managerUser = User::where('employee_id', $stdCode)
                             ->orWhere('employee_id', $extractedCode)
                             ->first();
-                        
+
                         if ($managerUser) {
                             $resolvedManagerId = $managerUser->id;
                         } else {
@@ -377,7 +377,7 @@ class EmployeeImportService
                             $latestUser = User::where('employee_id', 'like', 'EMP%')->orderBy('employee_id', 'desc')->first();
                             $num = 1000;
                             if ($latestUser && preg_match('/\d+/', $latestUser->employee_id, $numMatches)) {
-                                $num = (int)$numMatches[0] + 1;
+                                $num = (int) $numMatches[0] + 1;
                             }
                             $mgrCode = 'EMP' . str_pad($num, 5, '0', STR_PAD_LEFT);
                         }
@@ -465,7 +465,7 @@ class EmployeeImportService
                 }
             }
         }
-        
+
         // Fallback for occurrence > 1 if no suffix match was found
         if ($occurrence > 1) {
             foreach ($candidates as $candidate) {
@@ -513,7 +513,7 @@ class EmployeeImportService
         $value = trim($value);
         if (is_numeric($value)) {
             try {
-                return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$value)->format('Y-m-d');
+                return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float) $value)->format('Y-m-d');
             } catch (\Exception $e) {
                 // fall back to string parsing
             }
