@@ -68,7 +68,7 @@ class Attendance extends Model
 
         $checkIn = \Carbon\Carbon::parse($this->check_in_time);
         $shiftStart = $checkIn->copy()->setTimeFromTimeString($startTime);
-        $graceEnd = $shiftStart->copy()->addMinutes($graceMinutes);
+        $graceEnd = $shiftStart->copy()->addMinutes((int) $graceMinutes);
 
         $checkInMin = $checkIn->copy()->second(0)->microsecond(0);
         $graceEndMin = $graceEnd->copy()->second(0)->microsecond(0);
