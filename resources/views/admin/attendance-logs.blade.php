@@ -139,8 +139,8 @@
                 @forelse($employees as $emp)
                     @php
                         $att = $emp->today_attendance;
-                        $isSunday = \Carbon\Carbon::parse($date)->isSunday();
-                        $empStatus = $att ? $att->status : ($isSunday ? 'weekly_off' : 'absent');
+                        $isWeeklyOff = \App\Services\AttendanceTimingResolver::isWeeklyOff(\Carbon\Carbon::parse($date));
+                        $empStatus = $att ? $att->status : ($isWeeklyOff ? 'weekly_off' : 'absent');
                         
                         $checkInStr = $att?->check_in_time ? $att->check_in_time->timezone('Asia/Kolkata')->format('h:i A') : '—';
                         $checkOutStr = $att?->check_out_time ? $att->check_out_time->timezone('Asia/Kolkata')->format('h:i A') : '—';
@@ -228,7 +228,7 @@
                         <td class="py-4 px-4">
                             <span class="tag {{ $empStatus }} text-[11px] font-mono uppercase tracking-[0.8px] px-2.5 py-0.5 rounded border
                                 @if($empStatus === 'present') bg-forest-bg text-forest border-transparent
-                                @elseif($empStatus === 'late') bg-cognac-bg text-cognac border-transparent
+                                @elseif($empStatus === 'late' || $empStatus === 'half_day') bg-cognac-bg text-cognac border-transparent
                                 @elseif($empStatus === 'on_leave' || $empStatus === 'leave' || $empStatus === 'paid_leave' || $empStatus === 'unpaid_leave') bg-slate-bg text-slate border-transparent
                                 @elseif($empStatus === 'wfh') bg-forest-bg text-forest border-transparent
                                 @elseif($empStatus === 'weekly_off') bg-transparent text-vellum-muted border-hairline-strong
@@ -341,23 +341,13 @@
                             <x-input-label for="bulk_status_inline" value="Override Status" />
                             <select name="status" id="bulk_status_inline" class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
                                 <option value="present">Present</option>
+                                <option value="half_day">Half Day</option>
                                 <option value="absent">Absent</option>
                                 <option value="weekly_off">Weekly Off</option>
                                 <option value="paid_leave">Paid Leave</option>
                                 <option value="unpaid_leave">Unpaid Leave</option>
                                 <option value="wfh">Work From Home</option>
                             </select>
-                        </div>
-
-                        <!-- Override Classification (Optional) -->
-                        <div>
-                            <x-input-label for="bulk_classification_inline" value="Override Classification (Optional)" />
-                            <select name="classification" id="bulk_classification_inline" class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
-                                <option value="">Preserve calculated classification (Auto)</option>
-                                <option value="full_day">Full Day</option>
-                                <option value="half_day">Half Day</option>
-                            </select>
-                            <p class="text-[10.5px] text-vellum-muted mt-1">If left blank, each employee's automatically computed split is preserved.</p>
                         </div>
 
                         <!-- Override Reason -->
@@ -546,7 +536,7 @@
                                                     <td class="py-2 px-4">
                                                         <span class="tag {{ $item->status }} text-[9.5px] font-mono uppercase px-2 py-0.5 rounded border
                                                             @if($item->status === 'present') bg-forest-bg text-forest border-transparent
-                                                            @elseif($item->status === 'late') bg-cognac-bg text-cognac border-transparent
+                                                            @elseif($item->status === 'late' || $item->status === 'half_day') bg-cognac-bg text-cognac border-transparent
                                                             @elseif($item->status === 'on_leave' || $item->status === 'leave' || $item->status === 'paid_leave' || $item->status === 'unpaid_leave') bg-slate-bg text-slate border-transparent
                                                             @elseif($item->status === 'wfh') bg-forest-bg text-forest border-transparent
                                                             @elseif($item->status === 'weekly_off') bg-transparent text-vellum-muted border-hairline-strong

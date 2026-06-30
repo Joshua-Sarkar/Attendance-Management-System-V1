@@ -18,18 +18,17 @@ class AttendanceService
         $today = today();
         $now = now();
 
-        $department = $user->department;
-        $startTime = $department?->shift_start_time ?? '09:30:00';
-        $graceMinutes = $department?->grace_minutes ?? 5;
-
-        $threshold = today()->setTimeFromTimeString($startTime)->addMinutes((int) $graceMinutes);
+        $timings = AttendanceTimingResolver::resolveTimings($user, $today);
+        $threshold = $timings['grace_threshold'];
 
         $nowMin = $now->copy()->second(0)->microsecond(0);
         $thresholdMin = $threshold->copy()->second(0)->microsecond(0);
 
+        $lateArrivalClass = config('attendance.late_arrival_classification', 'half_day');
+
         if ($nowMin->greaterThan($thresholdMin)) {
             $status = 'late';
-            $classification = 'half_day';
+            $classification = $lateArrivalClass;
             $reason = 'late_arrival';
         } else {
             $status = 'present';
@@ -84,19 +83,23 @@ class AttendanceService
             // Calculate hours worked
             $hours = $attendance->check_in_time->diffInMinutes($attendance->check_out_time, true) / 60.0;
 
-            // Check if it's already classified as half_day due to late_arrival
-            if ($attendance->automatic_classification_reason !== 'late_arrival') {
-                if ($hours < 4.0) {
+            $lateArrivalClass = config('attendance.late_arrival_classification', 'half_day');
+
+            // If the record was classified as a late arrival, and that classification is already half_day, we don't need to override it.
+            // Otherwise, or if it wasn't late arrival, we check for insufficient hours.
+            if ($attendance->automatic_classification_reason === 'late_arrival' && $lateArrivalClass === 'half_day') {
+                // Keep it as half_day and late_arrival
+            } else {
+                if (AttendanceTimingResolver::isInsufficientHours($hours)) {
                     $attendance->automatic_classification = 'half_day';
                     $attendance->automatic_classification_reason = 'insufficient_hours';
                     if (!$attendance->is_overridden) {
                         $attendance->classification = 'half_day';
                     }
                 } else {
-                    $attendance->automatic_classification = 'full_day';
-                    $attendance->automatic_classification_reason = null;
+                    $attendance->automatic_classification = ($attendance->automatic_classification_reason === 'late_arrival') ? $lateArrivalClass : 'full_day';
                     if (!$attendance->is_overridden) {
-                        $attendance->classification = 'full_day';
+                        $attendance->classification = $attendance->automatic_classification;
                     }
                 }
             }
@@ -125,6 +128,13 @@ class AttendanceService
 
             if ($leave) {
                 $status = $leave->leave_type === 'work_from_home' ? 'wfh' : 'on_leave';
+                $metadata = [
+                    'is_paid' => $leave->is_paid,
+                    'leave_type' => $leave->leave_type,
+                ];
+                if ($leave->leave_type === 'complimentary') {
+                    $metadata['is_birthday'] = true;
+                }
                 $attendance = new Attendance([
                     'user_id' => $user->id,
                     'date' => today(),
@@ -132,8 +142,9 @@ class AttendanceService
                     'automatic_status' => $status,
                     'classification' => 'full_day',
                     'automatic_classification' => 'full_day',
+                    'metadata' => $metadata,
                 ]);
-            } elseif (today()->isSunday()) {
+            } elseif (AttendanceTimingResolver::isWeeklyOff(today())) {
                 $attendance = new Attendance([
                     'user_id' => $user->id,
                     'date' => today(),
@@ -234,26 +245,35 @@ class AttendanceService
             ->keyBy('user_id');
 
         // Map them together
-        $isSunday = \Carbon\Carbon::parse($date)->isSunday();
-        return $employees->map(function ($employee) use ($attendances, $leaves, $date, $isSunday) {
+        $parsedDate = \Carbon\Carbon::parse($date);
+        $isWeeklyOff = AttendanceTimingResolver::isWeeklyOff($parsedDate);
+        return $employees->map(function ($employee) use ($attendances, $leaves, $parsedDate, $isWeeklyOff) {
             $attendance = $attendances->get($employee->id);
             $leave = $leaves->get($employee->id);
 
             if (!$attendance) {
                 if ($leave) {
                     $status = $leave->leave_type === 'work_from_home' ? 'wfh' : 'on_leave';
+                    $metadata = [
+                        'is_paid' => $leave->is_paid,
+                        'leave_type' => $leave->leave_type,
+                    ];
+                    if ($leave->leave_type === 'complimentary') {
+                        $metadata['is_birthday'] = true;
+                    }
                     $attendance = new \App\Models\Attendance([
                         'user_id' => $employee->id,
-                        'date' => \Carbon\Carbon::parse($date),
+                        'date' => $parsedDate,
                         'status' => $status,
                         'automatic_status' => $status,
                         'classification' => 'full_day',
                         'automatic_classification' => 'full_day',
+                        'metadata' => $metadata,
                     ]);
-                } elseif ($isSunday) {
+                } elseif ($isWeeklyOff) {
                     $attendance = new \App\Models\Attendance([
                         'user_id' => $employee->id,
-                        'date' => \Carbon\Carbon::parse($date),
+                        'date' => $parsedDate,
                         'status' => 'weekly_off',
                         'automatic_status' => 'weekly_off',
                         'classification' => 'full_day',
@@ -287,7 +307,8 @@ class AttendanceService
         ];
         $totalLateMinutes = 0;
 
-        $isSunday = \Carbon\Carbon::parse($date)->isSunday();
+        $parsedDate = \Carbon\Carbon::parse($date);
+        $isWeeklyOff = AttendanceTimingResolver::isWeeklyOff($parsedDate);
 
         foreach ($employees as $emp) {
             $attendance = $emp->today_attendance;
@@ -299,7 +320,7 @@ class AttendanceService
             if ($attendance) {
                 $status = $attendance->status;
                 $isOverridden = $attendance->is_overridden;
-            } elseif ($isSunday) {
+            } elseif ($isWeeklyOff) {
                 $status = 'weekly_off';
             }
 
@@ -325,10 +346,10 @@ class AttendanceService
                     'late_minutes' => $lateMinutes,
                 ];
             } elseif ($status === 'absent') {
-                if (!$isSunday || $isOverridden) {
+                if (!$isWeeklyOff || $isOverridden) {
                     $absent++;
                 }
-            } elseif ($status === 'on_leave') {
+            } elseif ($status === 'on_leave' || $status === 'paid_leave' || $status === 'unpaid_leave') {
                 $onLeave++;
                 $exceptions['on_leave'][] = [
                     'name' => $emp->name,
@@ -406,7 +427,7 @@ class AttendanceService
                 
                 if ($dayLeave) {
                     $status = $dayLeave->leave_type === 'work_from_home' ? 'wfh' : 'on_leave';
-                } elseif ($date->isSunday()) {
+                } elseif (AttendanceTimingResolver::isWeeklyOff($date)) {
                     $status = 'weekly_off';
                 }
             }
@@ -421,10 +442,10 @@ class AttendanceService
                 $late++;
                 $present++;
             } elseif ($status === 'absent') {
-                if (!$date->isSunday() || $isOverridden) {
+                if (!AttendanceTimingResolver::isWeeklyOff($date) || $isOverridden) {
                     $absent++;
                 }
-            } elseif ($status === 'on_leave') {
+            } elseif ($status === 'on_leave' || $status === 'paid_leave' || $status === 'unpaid_leave') {
                 $onLeave++;
             } elseif ($status === 'wfh') {
                 $wfh++;

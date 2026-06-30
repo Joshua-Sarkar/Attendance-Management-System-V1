@@ -9,40 +9,48 @@ This document serves as the directory for configurable operational parameters in
 ### A. Default Shift Start Time
 - **Current Value**: `'09:30'`
 - **Default Value**: `'09:30'`
-- **Source**: Config file (`config/attendance.php` via env `ATTENDANCE_START_TIME`) and model defaults.
+- **Source**: Config file (`config/attendance.php` via env `ATTENDANCE_START_TIME`).
 - **Responsible Module**: Attendance Tracking.
 - **Files Using Configuration**:
-  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php#L4)
-  - [app/Models/Attendance.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/Attendance.php#L61)
-  - [app/Http/Controllers/AttendanceController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/AttendanceController.php#L124)
+  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php)
+  - [app/Services/AttendanceTimingResolver.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceTimingResolver.php)
 
-### B. Default Grace Minutes
+### B. Default Shift End Time
+- **Current Value**: `'18:30'`
+- **Default Value**: `'18:30'`
+- **Source**: Config file (`config/attendance.php` via env `ATTENDANCE_END_TIME`).
+- **Responsible Module**: Attendance Tracking.
+- **Files Using Configuration**:
+  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php)
+  - [app/Services/AttendanceTimingResolver.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceTimingResolver.php)
+
+### C. Default Grace Minutes
 - **Current Value**: `15`
 - **Default Value**: `15`
 - **Source**: Config file (`config/attendance.php` via env `ATTENDANCE_GRACE_MINUTES`).
 - **Responsible Module**: Attendance Tracking.
 - **Files Using Configuration**:
-  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php#L5)
-  - [app/Models/Attendance.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/Attendance.php#L62)
-  - [app/Http/Controllers/AttendanceController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/AttendanceController.php#L125)
+  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php)
+  - [app/Services/AttendanceTimingResolver.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceTimingResolver.php)
 
-### C. Department Specific Shift (e.g. Healthcare Department)
-- **Current Value**: `shift_start_time = '10:00:00'`, `grace_minutes = 5`
-- **Default Value**: `shift_start_time = '09:30:00'`, `grace_minutes = 5`
-- **Source**: Database (`departments` table columns).
-- **Responsible Module**: Department Management.
+### D. Healthcare Department Shift Timings Override
+- **Shift Start**: `'10:00'`
+- **Shift End**: `'18:00'`
+- **Grace Minutes**: `5`
+- **Source**: Config file (`config/attendance.php` via env parameters).
+- **Responsible Module**: Attendance Tracking.
 - **Files Using Configuration**:
-  - [app/Models/Attendance.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/Attendance.php#L48-L52)
-  - [app/Services/AttendanceService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceService.php#L21-L25)
+  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php)
+  - [app/Services/AttendanceTimingResolver.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceTimingResolver.php)
 
-### D. New Rules Transition Date
+### E. New Rules Transition Date
 - **Current Value**: Derived from env `ATTENDANCE_NEW_RULES_START_DATE`
 - **Default Value**: `null` (historical fallback to `09:00` start / 15 grace)
 - **Source**: Config file (`config/attendance.php` via env `ATTENDANCE_NEW_RULES_START_DATE`).
 - **Responsible Module**: Attendance Tracking.
 - **Files Using Configuration**:
-  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php#L8)
-  - [app/Models/Attendance.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/Attendance.php#L53)
+  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php)
+  - [app/Services/AttendanceTimingResolver.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceTimingResolver.php)
 
 ---
 
@@ -54,8 +62,8 @@ This document serves as the directory for configurable operational parameters in
 - **Source**: Config file (`config/attendance.php` via env `LEAVE_MONTHLY_ACCRUAL_RATE`).
 - **Responsible Module**: Leave Request Management & Ledger.
 - **Files Using Configuration**:
-  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php#L7)
-  - [app/Console/Commands/AccrueLeavesCommand.php](file:///c:/Users/Lenovo/AMS-V1/app/Console/Commands/AccrueLeavesCommand.php#L43)
+  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php)
+  - [app/Console/Commands/AccrueLeavesCommand.php](file:///c:/Users/Lenovo/AMS-V1/app/Console/Commands/AccrueLeavesCommand.php)
 
 ### B. Opening Balance Credit
 - **Current Value**: `2.00` days
@@ -63,16 +71,26 @@ This document serves as the directory for configurable operational parameters in
 - **Source**: Code (Hardcoded).
 - **Responsible Module**: Leave Request Management & Ledger.
 - **Files Using Configuration**:
-  - [app/Services/LeaveBalanceService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/LeaveBalanceService.php#L92)
+  - [app/Services/LeaveBalanceService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/LeaveBalanceService.php)
 
 ### C. Birthday Leave Allocation Parameters
-- **Unlock Window**: `1` day before birthday (Hardcoded).
-- **Expiry Duration**: `1` year from unlock date (Hardcoded).
+- **Unlock Window**: `1` day before birthday (configurable via `'attendance.birthday_leave_unlock_days'`).
+- **Expiry Duration**: `1` year from unlock date (configurable via `'attendance.birthday_leave_expiry_years'`).
 - **Credit Amount**: `1.00` day (Hardcoded).
-- **Source**: Code (Hardcoded).
+- **Source**: Config file (`config/attendance.php`).
 - **Responsible Module**: Birthday Leave.
 - **Files Using Configuration**:
-  - [app/Models/User.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/User.php#L121-L155)
+  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php)
+  - [app/Models/User.php](file:///c:/Users/Lenovo/AMS-V1/app/Models/User.php)
+
+### D. Allow Negative Leave Balance Policy
+- **Current Value**: `true`
+- **Default Value**: `true`
+- **Source**: Config file (`config/attendance.php` via env `LEAVE_ALLOW_NEGATIVE_BALANCE`).
+- **Responsible Module**: Attendance Overrides & Leave Request Management.
+- **Files Using Configuration**:
+  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php)
+  - [app/Http/Controllers/AttendanceOverrideController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/AttendanceOverrideController.php)
 
 ---
 
@@ -84,43 +102,55 @@ This document serves as the directory for configurable operational parameters in
 - **Source**: Config file (`config/employees.php` via env `DEFAULT_EMPLOYEE_PASSWORD`).
 - **Responsible Module**: Authentication & Security.
 - **Files Using Configuration**:
-  - [config/employees.php](file:///c:/Users/Lenovo/AMS-V1/config/employees.php#L5)
-  - [app/Services/EmployeeImportService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/EmployeeImportService.php#L24)
-  - [tests/Feature/PasswordStrategySecurityTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/PasswordStrategySecurityTest.php#L29)
+  - [config/employees.php](file:///c:/Users/Lenovo/AMS-V1/config/employees.php)
+  - [app/Services/EmployeeImportService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/EmployeeImportService.php)
+  - [tests/Feature/PasswordStrategySecurityTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/PasswordStrategySecurityTest.php)
 
 ---
 
 ## 4. System Operational Thresholds
 
 ### A. Half-Day Working Hour Limit
-- **Current Value**: `4.0` hours
+- **Current Value**: `4.0` hours (configurable via `'attendance.half_day_threshold_hours'`).
 - **Default Value**: `4.0`
-- **Source**: Code (Hardcoded).
+- **Source**: Config file (`config/attendance.php`).
 - **Responsible Module**: Attendance Tracking.
 - **Files Using Configuration**:
-  - [app/Services/AttendanceService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceService.php#L89)
+  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php)
+  - [app/Services/AttendanceTimingResolver.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceTimingResolver.php)
+  - [app/Services/AttendanceService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceService.php)
 
 ### B. Weekly Off Exclusions
-- **Current Value**: `'Sunday'`
+- **Current Value**: `'Sunday'` (configurable via `'attendance.weekly_off_day'`).
 - **Default Value**: `'Sunday'`
-- **Source**: Code (Hardcoded).
+- **Source**: Config file (`config/attendance.php`).
 - **Responsible Module**: Attendance Tracking.
 - **Files Using Configuration**:
-  - [app/Services/AttendanceService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceService.php#L136)
-  - [app/Http/Controllers/AttendanceController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/AttendanceController.php#L70)
-  - [tests/Feature/WorkingDaysTest.php](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/WorkingDaysTest.php#L49)
+  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php)
+  - [app/Services/AttendanceTimingResolver.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceTimingResolver.php)
+  - [app/Services/AttendanceService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceService.php)
+  - [app/Http/Controllers/AttendanceController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/AttendanceController.php)
 
-### C. Form Min Character Limits (e.g. Override reason)
+### C. Late Arrival Classification
+- **Current Value**: `'half_day'` (configurable via `'attendance.late_arrival_classification'`).
+- **Default Value**: `'half_day'`
+- **Source**: Config file (`config/attendance.php`).
+- **Responsible Module**: Attendance Tracking.
+- **Files Using Configuration**:
+  - [config/attendance.php](file:///c:/Users/Lenovo/AMS-V1/config/attendance.php)
+  - [app/Services/AttendanceService.php](file:///c:/Users/Lenovo/AMS-V1/app/Services/AttendanceService.php)
+
+### D. Form Min Character Limits (e.g. Override reason)
 - **Current Value**: `5` characters
 - **Default Value**: `5`
 - **Source**: Code (Validation rules).
 - **Responsible Module**: Attendance Overrides, Leave Request Management.
 - **Files Using Configuration**:
-  - [app/Http/Controllers/AttendanceOverrideController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/AttendanceOverrideController.php#L21)
-  - [app/Http/Controllers/LeaveRequestController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/LeaveRequestController.php#L110)
+  - [app/Http/Controllers/AttendanceOverrideController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/AttendanceOverrideController.php)
+  - [app/Http/Controllers/LeaveRequestController.php](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/LeaveRequestController.php)
 
 ---
 
 ## 5. Related Modules & Cross References
-- **[02_ATTENDANCE_RULES.md](file:///c:/Users/Lenovo/AMS-V1/docs/domain/02_ATTENDANCE_RULES.md)**: Reads shift start parameters for late arrivals.
-- **[03_LEAVE_RULES.md](file:///c:/Users/Lenovo/AMS-V1/docs/domain/03_LEAVE_RULES.md)**: Reads monthly accrual credits parameters.
+- **[02_ATTENDANCE_RULES.md](file:///c:/Users/Lenovo/AMS-V1/docs/domain/02_ATTENDANCE_RULES.md)**: Resolves timing engine constants.
+- **[03_LEAVE_RULES.md](file:///c:/Users/Lenovo/AMS-V1/docs/domain/03_LEAVE_RULES.md)**: Resolves birthday credit parameters.

@@ -59,6 +59,16 @@ class LeaveBalanceService
                 'approver_id' => null,
                 'approved_at' => now(),
                 'notes' => 'Automatically approved Birthday Leave.',
+                'is_paid' => true,
+                'metadata' => ['is_birthday' => true],
+            ]);
+
+            LeaveLedgerEntry::create([
+                'user_id' => $lockedUser->id,
+                'leave_request_id' => $request->id,
+                'amount' => 0.00,
+                'type' => 'deduction',
+                'description' => 'Birthday Leave approved (Paid)',
             ]);
 
             LeaveRequestLog::create([

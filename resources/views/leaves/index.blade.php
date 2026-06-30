@@ -65,17 +65,17 @@
                 <h4 class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Approved Leave Summary (Current Year)</h4>
                 <div class="grid grid-cols-2 sm:grid-cols-4 border border-hairline bg-surface rounded overflow-hidden">
                     <div class="p-5 border-r border-hairline last:border-none flex flex-col justify-between">
-                        <span class="text-[10.5px] font-semibold text-vellum-faint uppercase tracking-wider">Planned Leave</span>
+                        <span class="text-[10.5px] font-semibold text-vellum-faint uppercase tracking-wider">Planned Leave (Paid)</span>
                         <div class="font-display font-medium text-2xl my-2 text-vellum">{{ $stats['planned'] }} <span class="text-sm font-sans font-normal text-vellum-muted">days</span></div>
                         <span class="text-[11px] text-vellum-muted">Pre-approved roster days</span>
                     </div>
                     <div class="p-5 border-r border-hairline last:border-none flex flex-col justify-between">
-                        <span class="text-[10.5px] font-semibold text-vellum-faint uppercase tracking-wider">Unplanned Leave</span>
+                        <span class="text-[10.5px] font-semibold text-vellum-faint uppercase tracking-wider">Unplanned Leave (Paid)</span>
                         <div class="font-display font-medium text-2xl my-2 text-vellum">{{ $stats['unplanned'] }} <span class="text-sm font-sans font-normal text-vellum-muted">days</span></div>
                         <span class="text-[11px] text-vellum-muted">Emergency absences</span>
                     </div>
                     <div class="p-5 border-r border-hairline last:border-none flex flex-col justify-between">
-                        <span class="text-[10.5px] font-semibold text-vellum-faint uppercase tracking-wider">Birthday Leave</span>
+                        <span class="text-[10.5px] font-semibold text-vellum-faint uppercase tracking-wider">Birthday Leave (Paid)</span>
                         <div class="font-display font-medium text-2xl my-2 text-vellum">{{ $stats['complimentary'] }} <span class="text-sm font-sans font-normal text-vellum-muted">days</span></div>
                         <span class="text-[11px] text-vellum-muted">Complimentary credit</span>
                     </div>
@@ -114,17 +114,6 @@
                             if (!$resolvedType && $req->leave_credit_id) {
                                 $resolvedType = 'complimentary';
                             }
-                            if (in_array($resolvedType, ['planned', 'casual_leave', 'paid_leave'])) {
-                                $typeStr = 'Planned Leave';
-                            } elseif (in_array($resolvedType, ['unplanned', 'sick_leave', 'emergency_leave', 'unpaid_leave'])) {
-                                $typeStr = 'Unplanned Leave';
-                            } elseif ($resolvedType === 'complimentary') {
-                                $typeStr = 'Birthday Leave';
-                            } elseif ($resolvedType === 'work_from_home') {
-                                $typeStr = 'Work From Home';
-                            } else {
-                                $typeStr = 'Planned Leave';
-                            }
                             
                             $feedback = '';
                             if ($status === 'approved' && $req->notes) {
@@ -133,7 +122,7 @@
                                 $feedback = ' · Rejection: "' . $req->rejection_reason . '"';
                             }
                             
-                            $desc = ucfirst($typeStr) . ' · ' . $req->reason . $feedback;
+                            $desc = $req->leave_type_label . ' · ' . $req->reason . $feedback;
                         @endphp
                         <tr class="hover:bg-brass/[0.04] transition duration-150 text-[16px]">
                             <!-- Status -->
@@ -158,7 +147,7 @@
 
                             <!-- Leave Type -->
                             <td class="py-4 px-4 text-[18px] font-bold text-vellum">
-                                {{ ucfirst($typeStr) }}
+                                {{ $req->leave_type_label }}
                             </td>
 
                             <!-- Reason / Details -->
@@ -226,17 +215,6 @@
                             if (!$resolvedType && $request->leave_credit_id) {
                                 $resolvedType = 'complimentary';
                             }
-                            if (in_array($resolvedType, ['planned', 'casual_leave', 'paid_leave'])) {
-                                $typeStr = 'Planned Leave';
-                            } elseif (in_array($resolvedType, ['unplanned', 'sick_leave', 'emergency_leave', 'unpaid_leave'])) {
-                                $typeStr = 'Unplanned Leave';
-                            } elseif ($resolvedType === 'complimentary') {
-                                $typeStr = 'Birthday Leave';
-                            } elseif ($resolvedType === 'work_from_home') {
-                                $typeStr = 'Work From Home';
-                            } else {
-                                $typeStr = 'Planned Leave';
-                            }
                         @endphp
                         <tr class="hover:bg-brass/[0.04] transition duration-150 text-[16px]">
                             <!-- Employee -->
@@ -252,7 +230,7 @@
 
                             <!-- Leave Type -->
                             <td class="py-4 px-4 text-[16px] text-vellum font-semibold capitalize">
-                                {{ $typeStr }}
+                                {{ $request->leave_type_label }}
                             </td>
 
                             <!-- Reason / Details -->
@@ -318,17 +296,6 @@
                             if (!$resolvedType && $request->leave_credit_id) {
                                 $resolvedType = 'complimentary';
                             }
-                            if (in_array($resolvedType, ['planned', 'casual_leave', 'paid_leave'])) {
-                                $typeStr = 'Planned Leave';
-                            } elseif (in_array($resolvedType, ['unplanned', 'sick_leave', 'emergency_leave', 'unpaid_leave'])) {
-                                $typeStr = 'Unplanned Leave';
-                            } elseif ($resolvedType === 'complimentary') {
-                                $typeStr = 'Birthday Leave';
-                            } elseif ($resolvedType === 'work_from_home') {
-                                $typeStr = 'Work From Home';
-                            } else {
-                                $typeStr = 'Planned Leave';
-                            }
                         @endphp
                         <tr class="hover:bg-brass/[0.04] transition duration-150 text-[16px]">
                             <!-- Status tag -->
@@ -358,7 +325,7 @@
 
                             <!-- Leave Type -->
                             <td class="py-4 px-4 text-[16px] text-vellum font-semibold capitalize">
-                                {{ $typeStr }}
+                                {{ $request->leave_type_label }}
                             </td>
 
                             <!-- Reviewed By -->

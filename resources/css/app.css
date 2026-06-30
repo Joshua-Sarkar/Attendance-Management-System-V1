@@ -210,6 +210,12 @@ input, select, textarea {
     border-color: rgba(195, 137, 101, 0.2);
 }
 
+.tag.half_day {
+    background: var(--cognac-bg);
+    color: var(--cognac-muted-light);
+    border-color: rgba(195, 137, 101, 0.2);
+}
+
 .tag.leave, .tag.on_leave {
     background: var(--slate-bg);
     color: var(--slate-muted-light);

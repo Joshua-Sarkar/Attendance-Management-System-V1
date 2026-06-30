@@ -29,11 +29,12 @@
                 <select name="leave_type" id="leave_type" required
                         class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2.5 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
                     <option value="" disabled {{ old('leave_type') ? '' : 'selected' }}>Select Leave Type</option>
-                    <option value="planned" {{ old('leave_type') === 'planned' ? 'selected' : '' }}>Planned Leave</option>
-                    <option value="unplanned" {{ old('leave_type') === 'unplanned' ? 'selected' : '' }}>Unplanned Leave</option>
+                    <option value="planned" {{ old('leave_type') === 'planned' ? 'selected' : '' }}>Planned Leave (Paid)</option>
+                    <option value="unplanned" {{ old('leave_type') === 'unplanned' ? 'selected' : '' }}>Unplanned Leave (Paid)</option>
+                    <option value="unpaid" {{ old('leave_type') === 'unpaid' ? 'selected' : '' }}>Unpaid Leave</option>
                     @if($hasBirthdayCredit ?? false)
                         <option value="complimentary" {{ old('leave_type') === 'complimentary' ? 'selected' : '' }}>
-                            Birthday Leave
+                            Birthday Leave (Paid)
                         </option>
                     @endif
                 </select>

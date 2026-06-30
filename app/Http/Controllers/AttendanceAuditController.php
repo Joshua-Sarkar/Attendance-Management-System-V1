@@ -34,8 +34,9 @@ class AttendanceAuditController extends Controller
         if ($status) {
             $employees = $employees->filter(function ($emp) use ($status, $date) {
                 $att = $emp->today_attendance;
-                $isSunday = \Carbon\Carbon::parse($date)->isSunday();
-                $resolvedStatus = $att ? $att->status : ($isSunday ? 'weekly_off' : 'absent');
+                $parsedDate = \Carbon\Carbon::parse($date);
+                $isWeeklyOff = \App\Services\AttendanceTimingResolver::isWeeklyOff($parsedDate);
+                $resolvedStatus = $att ? $att->status : ($isWeeklyOff ? 'weekly_off' : 'absent');
                 return $resolvedStatus === $status;
             });
         }

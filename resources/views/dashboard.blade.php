@@ -162,7 +162,8 @@
                         @php
                             $dateObj = \Carbon\Carbon::parse($date);
                             $att = $emp->today_attendance;
-                            $status = $att ? $att->status : ($dateObj->isSunday() ? 'weekend' : 'absent');
+                            $isWeeklyOff = \App\Services\AttendanceTimingResolver::isWeeklyOff($dateObj);
+                            $status = $att ? $att->status : ($isWeeklyOff ? 'weekend' : 'absent');
                             
                             // Determine entry details
                             $checkInTimeStr = $att?->check_in_time ? $att->check_in_time->timezone('Asia/Kolkata')->format('h:i A') : '—';
@@ -191,8 +192,8 @@
                         <div class="ledger-row grid grid-cols-[24px_48px_1.8fr_120px] items-center py-4 px-2 border-b border-hairline last:border-none hover:bg-brass/[0.04] transition duration-150">
                             <span class="seal-indicator {{ $status }} w-2 h-2 rounded-full 
                                 @if($status === 'present' || $status === 'wfh') bg-forest
-                                @elseif($status === 'late') bg-cognac
-                                @elseif($status === 'on_leave' || $status === 'leave') bg-slate
+                                @elseif($status === 'late' || $status === 'half_day') bg-cognac
+                                @elseif($status === 'on_leave' || $status === 'leave' || $status === 'paid_leave' || $status === 'unpaid_leave') bg-slate
                                 @elseif($status === 'weekend') bg-hairline-strong
                                 @else bg-burgundy @endif"></span>
                             <span class="row-time font-mono text-[13px] text-vellum-muted">{{ $checkInTimeStr }}</span>
@@ -206,11 +207,11 @@
                             <div class="text-right">
                                 <span class="tag {{ $status }} text-[11px] font-mono uppercase tracking-[0.8px] px-2.5 py-1 rounded border
                                     @if($status === 'present') bg-forest-bg text-forest border-transparent
-                                    @elseif($status === 'late') bg-cognac-bg text-cognac border-transparent
-                                    @elseif($status === 'on_leave' || $status === 'leave') bg-slate-bg text-slate border-transparent
+                                    @elseif($status === 'late' || $status === 'half_day') bg-cognac-bg text-cognac border-transparent
+                                    @elseif($status === 'on_leave' || $status === 'leave' || $status === 'paid_leave' || $status === 'unpaid_leave') bg-slate-bg text-slate border-transparent
                                     @elseif($status === 'weekend') bg-transparent text-vellum-muted border-hairline-strong
                                     @else bg-burgundy-bg text-burgundy border-transparent @endif">
-                                    @if($status === 'on_leave') Leave @elseif($status === 'weekend') Weekend @else {{ str_replace('_', ' ', $status) }} @endif
+                                    @if($status === 'on_leave') Leave @elseif($status === 'paid_leave') Paid Leave @elseif($status === 'unpaid_leave') Unpaid Leave @elseif($status === 'weekend') Weekend @else {{ str_replace('_', ' ', $status) }} @endif
                                 </span>
                             </div>
                         </div>

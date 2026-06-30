@@ -341,3 +341,86 @@ test('non-admin users cannot access the import page or upload files', function (
         ]);
     $uploadResponse->assertStatus(403);
 });
+
+test('it rejects import if circular reporting hierarchy is detected', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'status' => 'active',
+        'must_change_password' => false,
+    ]);
+
+    Department::create([
+        'name' => 'Engineering',
+        'code' => 'ENG',
+        'description' => 'Engineering Department',
+    ]);
+
+    // Create a temporary Excel file with A -> B -> C -> A cycle
+    $tempFile = tempnam(storage_path('app'), 'import_test') . '.xlsx';
+
+    $headers = [
+        'Employee Code', 'Full Name', 'Official Email ID', 'Reporting Manager', 'Employee Status', 'Department'
+    ];
+
+    $data = [
+        [
+            'Employee Code' => '101',
+            'Full Name' => 'User A',
+            'Official Email ID' => 'usera@example.com',
+            'Reporting Manager' => 'User B (102)',
+            'Employee Status' => 'Active',
+            'Department' => 'Engineering',
+        ],
+        [
+            'Employee Code' => '102',
+            'Full Name' => 'User B',
+            'Official Email ID' => 'userb@example.com',
+            'Reporting Manager' => 'User C (103)',
+            'Employee Status' => 'Active',
+            'Department' => 'Engineering',
+        ],
+        [
+            'Employee Code' => '103',
+            'Full Name' => 'User C',
+            'Official Email ID' => 'userc@example.com',
+            'Reporting Manager' => 'User A (101)',
+            'Employee Status' => 'Active',
+            'Department' => 'Engineering',
+        ],
+    ];
+
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // Write Headers
+    foreach ($headers as $colIndex => $header) {
+        $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1);
+        $sheet->setCellValue($colLetter . '1', $header);
+    }
+
+    // Write Data
+    foreach ($data as $rowIndex => $rowData) {
+        foreach ($headers as $colIndex => $header) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1);
+            $value = $rowData[$header] ?? '';
+            $sheet->setCellValue($colLetter . ($rowIndex + 2), $value);
+        }
+    }
+
+    $writer = new Xlsx($spreadsheet);
+    $writer->save($tempFile);
+
+    // Call import
+    $importService = resolve(\App\Services\EmployeeImportService::class);
+    
+    $this->expectException(\Exception::class);
+    $this->expectExceptionMessage('Circular reporting loop detected');
+    
+    try {
+        $importService->import($tempFile);
+    } finally {
+        if (file_exists($tempFile)) {
+            @unlink($tempFile);
+        }
+    }
+});

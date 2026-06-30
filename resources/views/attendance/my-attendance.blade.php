@@ -113,11 +113,11 @@
                                 <div>
                                     <span class="tag {{ $today_attendance->status }} text-[11px] font-mono uppercase tracking-[0.8px] px-2.5 py-1 rounded border
                                         @if($today_attendance->status === 'present') bg-forest-bg text-forest border-transparent
-                                        @elseif($today_attendance->status === 'late') bg-cognac-bg text-cognac border-transparent
-                                        @elseif($today_attendance->status === 'on_leave' || $today_attendance->status === 'leave') bg-slate-bg text-slate border-transparent
+                                        @elseif($today_attendance->status === 'late' || $today_attendance->status === 'half_day') bg-cognac-bg text-cognac border-transparent
+                                        @elseif($today_attendance->status === 'on_leave' || $today_attendance->status === 'leave' || $today_attendance->status === 'paid_leave' || $today_attendance->status === 'unpaid_leave') bg-slate-bg text-slate border-transparent
                                         @elseif($today_attendance->status === 'wfh') bg-forest-bg text-forest border-transparent
                                         @else bg-burgundy-bg text-burgundy border-transparent @endif">
-                                        {{ str_replace('_', ' ', $today_attendance->status) }}
+                                        @if($today_attendance->status === 'on_leave') Leave @elseif($today_attendance->status === 'paid_leave') Paid Leave @elseif($today_attendance->status === 'unpaid_leave') Unpaid Leave @else {{ str_replace('_', ' ', $today_attendance->status) }} @endif
                                     </span>
                                 </div>
                             </div>
@@ -272,7 +272,7 @@
                     <div class="text-right">
                         <span class="tag {{ $status }} text-[11px] font-mono uppercase tracking-[0.8px] px-2.5 py-1 rounded border
                             @if($status === 'present') bg-forest-bg text-forest border-transparent
-                            @elseif($status === 'late') bg-cognac-bg text-cognac border-transparent
+                            @elseif($status === 'late' || $status === 'half_day') bg-cognac-bg text-cognac border-transparent
                             @elseif($status === 'on_leave' || $status === 'leave' || $status === 'paid_leave' || $status === 'unpaid_leave') bg-slate-bg text-slate border-transparent
                             @elseif($status === 'wfh') bg-forest-bg text-forest border-transparent
                             @elseif($status === 'weekly_off' || $status === 'weekend') bg-transparent text-vellum-muted border-hairline-strong

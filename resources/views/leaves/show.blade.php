@@ -18,24 +18,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-hairline/40 pb-4 gap-4">
             <div>
                 <h3 class="text-xl font-bold text-brass font-display capitalize">
-                    @php
-                        $resolvedType = $leaveRequest->leave_type;
-                        if (!$resolvedType && $leaveRequest->leave_credit_id) {
-                            $resolvedType = 'complimentary';
-                        }
-                        if (in_array($resolvedType, ['planned', 'casual_leave', 'paid_leave'])) {
-                            $displayType = 'Planned Leave';
-                        } elseif (in_array($resolvedType, ['unplanned', 'sick_leave', 'emergency_leave', 'unpaid_leave'])) {
-                            $displayType = 'Unplanned Leave';
-                        } elseif ($resolvedType === 'complimentary') {
-                            $displayType = 'Birthday Leave';
-                        } elseif ($resolvedType === 'work_from_home') {
-                            $displayType = 'Work From Home';
-                        } else {
-                            $displayType = 'Planned Leave';
-                        }
-                    @endphp
-                    {{ $displayType }}
+                    {{ $leaveRequest->leave_type_label }}
                 </h3>
                 <p class="text-xs text-vellum-muted mt-1 font-medium">
                     Submitted by: <span class="font-semibold text-vellum">{{ $leaveRequest->user->name }}</span> (ID: {{ $leaveRequest->user->employee_id }})

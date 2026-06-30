@@ -118,8 +118,10 @@ class User extends Authenticatable
                 $birthday = \Carbon\Carbon::create($year, $birthMonth, $birthDay)->startOfDay();
             }
 
-            $unlockDate = $birthday->copy()->subDay()->startOfDay();
-            $expiryDate = $unlockDate->copy()->addYear()->endOfDay();
+            $unlockDays = (int) config('attendance.birthday_leave_unlock_days', 1);
+            $expiryYears = (int) config('attendance.birthday_leave_expiry_years', 1);
+            $unlockDate = $birthday->copy()->subDays($unlockDays)->startOfDay();
+            $expiryDate = $unlockDate->copy()->addYears($expiryYears)->endOfDay();
 
             // If we are on or after the unlock date, check/create the credit
             if ($date->greaterThanOrEqualTo($unlockDate)) {
@@ -188,8 +190,10 @@ class User extends Authenticatable
                 $birthday = \Carbon\Carbon::create($year, $birthMonth, $birthDay)->startOfDay();
             }
 
-            $unlockDate = $birthday->copy()->subDay()->startOfDay();
-            $expiryDate = $unlockDate->copy()->addYear()->endOfDay();
+            $unlockDays = (int) config('attendance.birthday_leave_unlock_days', 1);
+            $expiryYears = (int) config('attendance.birthday_leave_expiry_years', 1);
+            $unlockDate = $birthday->copy()->subDays($unlockDays)->startOfDay();
+            $expiryDate = $unlockDate->copy()->addYears($expiryYears)->endOfDay();
 
             $joiningYear = $profile->joining_date ? \Carbon\Carbon::parse($profile->joining_date)->year : null;
             if ($joiningYear && $year < $joiningYear) {

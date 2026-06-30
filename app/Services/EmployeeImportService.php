@@ -316,13 +316,15 @@ class EmployeeImportService
             }
 
             // PASS 2: Update manager_id for successfully processed users
+            $proposedManagers = [];
+            $userInstances = [];
+
             foreach ($processedUsers as $rowIndex => $user) {
                 $row = $rows[$rowIndex];
                 $managerCol = trim($this->getVal($row, $headersMap, ['Reporting Manager', 'Manager']) ?? '');
+                $resolvedManagerId = null;
 
                 if (!empty($managerCol)) {
-                    $resolvedManagerId = null;
-
                     // 1. Try parentheses match, e.g. "Name (EMP00001)" or "Name (1)"
                     if (preg_match('/\(([^)]+)\)/', $managerCol, $matches)) {
                         $extractedCode = trim($matches[1]);
@@ -414,21 +416,54 @@ class EmployeeImportService
 
                         $resolvedManagerId = $managerUser->id;
                     }
+                }
 
-                    if ($resolvedManagerId) {
-                        $user->manager_id = $resolvedManagerId;
-                        $user->save();
+                $proposedManagers[$user->id] = $resolvedManagerId;
+                $userInstances[$user->id] = $user;
+            }
 
-                        // Automatically promote resolved manager to 'manager' role
-                        $mgrUser = User::find($resolvedManagerId);
-                        if ($mgrUser && $mgrUser->role === 'employee') {
-                            $mgrUser->role = 'manager';
-                            $mgrUser->save();
-                        }
+            // Loop Detection: Check for multi-level circular reporting cycles
+            foreach ($proposedManagers as $userId => $managerId) {
+                if ($managerId === null) {
+                    continue;
+                }
+
+                if ($userId === $managerId) {
+                    $userObj = $userInstances[$userId];
+                    throw new \Exception("Circular reporting detected: Employee {$userObj->name} ({$userObj->employee_id}) cannot report to themselves.");
+                }
+
+                $visited = [$userId => true];
+                $current = $managerId;
+
+                while ($current !== null) {
+                    if (isset($visited[$current])) {
+                        $userObj = User::find($userId) ?? $userInstances[$userId];
+                        $mgrObj = User::find($managerId) ?? $userInstances[$managerId];
+                        throw new \Exception("Circular reporting loop detected involving employee {$userObj->name} ({$userObj->employee_id}) and manager {$mgrObj->name} ({$mgrObj->employee_id}).");
                     }
-                } else {
-                    $user->manager_id = null;
-                    $user->save();
+                    $visited[$current] = true;
+
+                    if (array_key_exists($current, $proposedManagers)) {
+                        $current = $proposedManagers[$current];
+                    } else {
+                        $current = User::where('id', $current)->value('manager_id');
+                    }
+                }
+            }
+
+            // Write assignments to Database
+            foreach ($proposedManagers as $userId => $managerId) {
+                $user = $userInstances[$userId];
+                $user->manager_id = $managerId;
+                $user->save();
+
+                if ($managerId) {
+                    $mgrUser = User::find($managerId);
+                    if ($mgrUser && $mgrUser->role === 'employee') {
+                        $mgrUser->role = 'manager';
+                        $mgrUser->save();
+                    }
                 }
             }
 

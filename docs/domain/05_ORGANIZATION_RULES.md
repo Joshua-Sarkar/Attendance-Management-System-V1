@@ -24,7 +24,7 @@ This document details the rules governing corporate structures, reporting hierar
 - **Approval Chains**: Leave requests are routed up the hierarchy. A manager can only view records and approve leave requests for employees who directly report to them.
 - **Reporting Constraints**:
   - A user cannot report to themselves (no circular self-references).
-  - Circular reporting loops (e.g. A reports to B, and B reports to A) must be blocked.
+  - Circular reporting loops (e.g. A reports to B, B reports to C, and C reports to A) must be blocked.
   - An Admin cannot report to a Manager.
 
 ### Current Implementation
@@ -32,13 +32,8 @@ This document details the rules governing corporate structures, reporting hierar
 - Eloquent mappings:
   - `manager()` BelongsTo relationship mapped to parent User.
   - `directReports()` HasMany relationship.
-- Validations are enforced in [HierarchySplitTest](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/HierarchySplitTest.php):
-  - Admins can create other Admins.
-  - Managers cannot create Admins or other Managers.
-  - Circular chains are audited during manual creation or Zimyo bulk sheets imports.
-
-### Known Inconsistencies
-- **Import Pass-Through Loops**: The Zimyo Excel import engine creates reporting chains dynamically. While it prevents direct self-reporting, it does **not** recursively traverse the tree to check for multi-level loops (e.g. A reports to B, B reports to C, C reports to A). If such a loop is imported, it will create an infinite loop during database traversal.
+- Validations are enforced in [HierarchySplitTest](file:///c:/Users/Lenovo/AMS-V1/tests/Feature/HierarchySplitTest.php) and during manual creations.
+- **Recursive Cycle Verification**: Inside [EmployeeImportService](file:///c:/Users/Lenovo/AMS-V1/app/Services/EmployeeImportService.php), the uploader builds a dependency graph of all proposed relationships during Pass 2. Before committing to the database, it recursively traces reporting chains. If a circular reporting hierarchy is detected (multi-level or self-reports), the entire transaction is rolled back and the import is aborted with a validation error list.
 
 ---
 
@@ -50,16 +45,16 @@ This document details the rules governing corporate structures, reporting hierar
 - **Experience Formats**: To accommodate non-numeric, descriptive values, columns tracking tenure or experience must accept strings (e.g., `"3 Years, 4 Months"`) rather than decimals.
 
 ### Current Implementation
-- Mapped in [EmployeeProfile](file:///c:/Users/Lenovo/AMS-V1/app/Models/EmployeeProfile.php) with relation `employeeProfile()` in [User](file:///c:/Users/Lenovo/AMS-V1/app/Models/User.php#L78-L81).
+- Mapped in [EmployeeProfile](file:///c:/Users/Lenovo/AMS-V1/app/Models/EmployeeProfile.php) with relation `employeeProfile()` in [User](file:///c:/Users/Lenovo/AMS-V1/app/Models/User.php).
 - The table schema uses `ON DELETE CASCADE` foreign key mappings:
   `user_id bigint unsigned FK references users(id) ON DELETE CASCADE`.
 - Experience variables `previous_year_experience`, `years_completed`, and `overall_year_experience` are mapped as nullable `varchar(255)` string columns in migrations.
 
-### Known Inconsistencies
-- Deleting an employee via the UI is soft or hard? The controller [EmployeeController@destroy](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/EmployeeController.php#L206-L220) executes a hard delete (`$user->delete()`), triggering the database-level cascade. However, this deletes all historical check-in logs (`attendances`) and ledger entries (`leave_ledger_entries`), destroying audit history.
+### Known Inconsistencies (Technical Debt)
+- Deleting an employee via the UI is soft or hard? The controller [EmployeeController@destroy](file:///c:/Users/Lenovo/AMS-V1/app/Http/Controllers/EmployeeController.php) executes a hard delete (`$user->delete()`), triggering the database-level cascade. However, this deletes all historical check-in logs (`attendances`) and ledger entries (`leave_ledger_entries`), destroying audit history.
 
 ### Future Improvements
-- Implement Soft Deletes (`use SoftDeletes`) on the `User` and `EmployeeProfile` models to preserve historical log records for accounting and audit compliance.
+- Implement Soft Deletes (`use SoftDeletes`) on the `User` and `EmployeeProfile` models in a dedicated future sprint to preserve historical log records for accounting and audit compliance.
 
 ---
 

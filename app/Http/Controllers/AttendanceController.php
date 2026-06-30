@@ -80,7 +80,7 @@ class AttendanceController extends Controller
                 $monthPresent++;
             } elseif ($status === 'wfh') {
                 $monthWfh++;
-            } elseif ($status === 'on_leave') {
+            } elseif ($status === 'on_leave' || $status === 'paid_leave' || $status === 'unpaid_leave') {
                 $monthLeave++;
             } elseif ($status === 'absent') {
                 if (!$date->isSunday() || $isOverridden) {
@@ -121,11 +121,10 @@ class AttendanceController extends Controller
             ->get();
             
         $streak = 0;
-        $startTime = config('attendance.start_time', '09:00');
-        $graceMinutes = config('attendance.grace_minutes', 15);
-        $threshold = today()->setTimeFromTimeString($startTime)->addMinutes((int) $graceMinutes);
+        $timings = \App\Services\AttendanceTimingResolver::resolveTimings($user, today());
+        $threshold = $timings['grace_threshold'];
         
-        $todayIsSunday = today()->isSunday();
+        $todayIsWeeklyOff = \App\Services\AttendanceTimingResolver::isWeeklyOff(today());
         $todayStr = today()->format('Y-m-d');
         $todayHasLeave = $allLeaves->first(function($l) use ($todayStr) {
             return $todayStr >= $l->start_date->format('Y-m-d') && $todayStr <= $l->end_date->format('Y-m-d');
@@ -134,7 +133,7 @@ class AttendanceController extends Controller
         $todayHasAttendance = isset($allAttendances[$todayStr]);
         
         $evalDate = today();
-        if (!$todayHasAttendance && !$todayIsSunday && !$todayHasLeave) {
+        if (!$todayHasAttendance && !$todayIsWeeklyOff && !$todayHasLeave) {
             if ($now->lessThanOrEqualTo($threshold)) {
                 $evalDate = today()->subDay();
             }
@@ -155,12 +154,12 @@ class AttendanceController extends Controller
                 
                 if ($dayLeave) {
                     $status = $dayLeave->leave_type === 'work_from_home' ? 'wfh' : 'on_leave';
-                } elseif ($date->isSunday()) {
+                } elseif (\App\Services\AttendanceTimingResolver::isWeeklyOff($date)) {
                     $status = 'weekly_off';
                 }
             }
 
-            if ($status === 'weekly_off' || $status === 'on_leave') {
+            if ($status === 'weekly_off' || $status === 'on_leave' || $status === 'paid_leave' || $status === 'unpaid_leave') {
                 continue; // Ignore Weekly Off and approved leaves for streak calculations
             }
             

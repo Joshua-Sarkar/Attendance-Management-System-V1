@@ -22,6 +22,7 @@ class Attendance extends Model
         'automatic_status',
         'automatic_classification',
         'automatic_classification_reason',
+        'metadata',
     ];
 
     protected $casts = [
@@ -30,6 +31,7 @@ class Attendance extends Model
         'check_out_time' => 'datetime',
         'is_overridden' => 'boolean',
         'overridden_at' => 'datetime',
+        'metadata' => 'array',
     ];
 
     protected $appends = [
@@ -45,30 +47,10 @@ class Attendance extends Model
             return 0;
         }
 
-        $department = $this->user?->department;
-        if ($department && $department->shift_start_time) {
-            $startTime = $department->shift_start_time;
-            $graceMinutes = $department->grace_minutes ?? 5;
-        } else {
-            $transitionDate = config('attendance.new_rules_start_date');
-            $useNewRules = false;
-
-            if ($transitionDate) {
-                $useNewRules = $this->date->format('Y-m-d') >= $transitionDate;
-            }
-
-            if ($useNewRules) {
-                $startTime = config('attendance.start_time', '09:30');
-                $graceMinutes = config('attendance.grace_minutes', 15);
-            } else {
-                $startTime = '09:00';
-                $graceMinutes = 15;
-            }
-        }
+        $timings = \App\Services\AttendanceTimingResolver::resolveTimings($this->user, $this->date);
 
         $checkIn = \Carbon\Carbon::parse($this->check_in_time);
-        $shiftStart = $checkIn->copy()->setTimeFromTimeString($startTime);
-        $graceEnd = $shiftStart->copy()->addMinutes((int) $graceMinutes);
+        $graceEnd = $timings['grace_threshold'];
 
         $checkInMin = $checkIn->copy()->second(0)->microsecond(0);
         $graceEndMin = $graceEnd->copy()->second(0)->microsecond(0);

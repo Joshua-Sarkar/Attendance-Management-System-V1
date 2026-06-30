@@ -357,4 +357,71 @@ class LeaveAuthorizationModelTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    /** @test */
+    public function it_generates_correct_leave_type_display_labels(): void
+    {
+        // 1. Birthday Leave (Paid)
+        $birthdayLeave = new LeaveRequest(['leave_type' => 'complimentary', 'is_paid' => true]);
+        $this->assertEquals('Birthday Leave (Paid)', $birthdayLeave->leave_type_label);
+
+        $birthdayLeave2 = new LeaveRequest(['leave_credit_id' => 123, 'is_paid' => true]);
+        $this->assertEquals('Birthday Leave (Paid)', $birthdayLeave2->leave_type_label);
+
+        $birthdayLeave3 = new LeaveRequest(['leave_type' => 'birthday_leave', 'is_paid' => true]);
+        $this->assertEquals('Birthday Leave (Paid)', $birthdayLeave3->leave_type_label);
+
+        $birthdayLeave4 = new LeaveRequest(['leave_type' => 'planned', 'is_paid' => true, 'metadata' => ['is_birthday' => true]]);
+        $this->assertEquals('Birthday Leave (Paid)', $birthdayLeave4->leave_type_label);
+
+        // 2. Planned Leave (Paid)
+        $plannedPaid = new LeaveRequest(['leave_type' => 'planned', 'is_paid' => true]);
+        $this->assertEquals('Planned Leave (Paid)', $plannedPaid->leave_type_label);
+
+        // 3. Planned Leave (Unpaid)
+        $plannedUnpaid = new LeaveRequest(['leave_type' => 'planned', 'is_paid' => false]);
+        $this->assertEquals('Planned Leave (Unpaid)', $plannedUnpaid->leave_type_label);
+
+        $unpaidLeave = new LeaveRequest(['leave_type' => 'unpaid', 'is_paid' => false]);
+        $this->assertEquals('Planned Leave (Unpaid)', $unpaidLeave->leave_type_label);
+
+        // 4. Unplanned Leave (Paid)
+        $unplannedPaid = new LeaveRequest(['leave_type' => 'unplanned', 'is_paid' => true]);
+        $this->assertEquals('Unplanned Leave (Paid)', $unplannedPaid->leave_type_label);
+
+        // 5. Unplanned Leave (Unpaid)
+        $unplannedUnpaid = new LeaveRequest(['leave_type' => 'unplanned', 'is_paid' => false]);
+        $this->assertEquals('Unplanned Leave (Unpaid)', $unplannedUnpaid->leave_type_label);
+
+        // 6. Sick Leave
+        $sickLeave = new LeaveRequest(['leave_type' => 'sick_leave', 'is_paid' => true]);
+        $this->assertEquals('Sick Leave', $sickLeave->leave_type_label);
+
+        $sickLeave2 = new LeaveRequest(['leave_type' => 'sick', 'is_paid' => true]);
+        $this->assertEquals('Sick Leave', $sickLeave2->leave_type_label);
+
+        // 7. Emergency Leave
+        $emergencyLeave = new LeaveRequest(['leave_type' => 'emergency_leave', 'is_paid' => true]);
+        $this->assertEquals('Emergency Leave', $emergencyLeave->leave_type_label);
+
+        $emergencyLeave2 = new LeaveRequest(['leave_type' => 'emergency', 'is_paid' => true]);
+        $this->assertEquals('Emergency Leave', $emergencyLeave2->leave_type_label);
+
+        // 8. Legacy Leave Records
+        $casual = new LeaveRequest(['leave_type' => 'casual_leave', 'is_paid' => true]);
+        $this->assertEquals('Planned Leave (Paid)', $casual->leave_type_label);
+
+        $paid = new LeaveRequest(['leave_type' => 'paid_leave', 'is_paid' => true]);
+        $this->assertEquals('Planned Leave (Paid)', $paid->leave_type_label);
+
+        $unpaidLeaveLegacy = new LeaveRequest(['leave_type' => 'unpaid_leave', 'is_paid' => false]);
+        $this->assertEquals('Planned Leave (Unpaid)', $unpaidLeaveLegacy->leave_type_label);
+
+        // 9. Unknown leave values (fallback behavior)
+        $unknown1 = new LeaveRequest(['leave_type' => 'special_event', 'is_paid' => true]);
+        $this->assertEquals('Special Event', $unknown1->leave_type_label);
+
+        $unknown2 = new LeaveRequest(['leave_type' => 'bereavement_leave', 'is_paid' => false]);
+        $this->assertEquals('Bereavement Leave', $unknown2->leave_type_label);
+    }
 }
