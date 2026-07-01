@@ -9,7 +9,7 @@ This document details the business rules and ledger controls for planned, unplan
 ### Intended Business Rule
 The system supports four categories of leave:
 1. **Planned Leave**: Scheduled holidays applied for in advance. Requires manager approval. Deducted from leave balance if approved. Explicitly marked as Paid.
-2. **Unplanned Leave**: Emergency time-off. Applied for retroactively or on short notice. Requires manager approval. Deducted from leave balance if approved. Explicitly marked as Paid.
+2. **Unplanned Leave**: Emergency time-off. Applied for retroactively or on short notice. Requires manager approval. Bypasses regular leave balance validation and deductions, logging a zero-value ledger entry trail. Explicitly marked as Unpaid.
 3. **Unpaid Leave**: Non-salaried time-off. Requires manager approval. Bypasses regular leave balance validation and deductions, but logs a zero-value ledger entry trail. Used by Payroll to calculate salary deductions.
 4. **Birthday Leave (Paid)**: A special 1-day holiday allocated annually around the employee's birthday. It is a specialization of Paid Leave: it does not deduct from the standard leave balance (uses complimentary credit), is auto-approved if active, records a transparent `0.00` ledger entry, and is tagged with metadata `is_birthday = true`.
 

@@ -512,4 +512,455 @@ class AttendanceService
             ->take($limit)
             ->values();
     }
+
+    /**
+     * Resolve the active users list for bulk overrides based on scope parameters.
+     */
+    public function resolveBulkOverrideUsers(array $params): \Illuminate\Database\Eloquent\Collection
+    {
+        $scopeType = $params['scope_type'] ?? 'all';
+        $query = User::where('status', 'active');
+
+        if ($scopeType === 'employee') {
+            $employeeIds = $params['employee_ids'] ?? [];
+            if (empty($employeeIds)) {
+                return new \Illuminate\Database\Eloquent\Collection();
+            }
+            $query->whereIn('id', $employeeIds);
+        } elseif ($scopeType === 'department') {
+            $departmentIds = $params['department_ids'] ?? [];
+            if (empty($departmentIds)) {
+                return new \Illuminate\Database\Eloquent\Collection();
+            }
+            $query->whereIn('department_id', $departmentIds);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Resolve the dates list for bulk overrides based on mode and options.
+     */
+    public function resolveBulkOverrideDates(array $params): array
+    {
+        $dateMode = $params['date_mode'] ?? 'single';
+        $dates = [];
+
+        if ($dateMode === 'single') {
+            if (!empty($params['date'])) {
+                $dates[] = Carbon::parse($params['date'])->startOfDay();
+            }
+        } elseif ($dateMode === 'range') {
+            $startDateStr = $params['start_date'] ?? null;
+            $endDateStr = $params['end_date'] ?? null;
+            if ($startDateStr && $endDateStr) {
+                $start = Carbon::parse($startDateStr)->startOfDay();
+                $end = Carbon::parse($endDateStr)->startOfDay();
+
+                $workingDaysOnly = (bool) ($params['working_days_only'] ?? false);
+                $includeSundays = (bool) ($params['include_sundays'] ?? false);
+
+                $current = $start->copy();
+                while ($current->lte($end)) {
+                    $isWeeklyOff = AttendanceTimingResolver::isWeeklyOff($current);
+
+                    if ($workingDaysOnly) {
+                        if ($isWeeklyOff) {
+                            $dayName = strtolower($current->format('l'));
+                            if ($includeSundays && $dayName === 'sunday') {
+                                $dates[] = $current->copy();
+                            }
+                        } else {
+                            $dates[] = $current->copy();
+                        }
+                    } else {
+                        $dates[] = $current->copy();
+                    }
+                    $current->addDay();
+                }
+            }
+        } elseif ($dateMode === 'multiple') {
+            $datesArray = $params['dates'] ?? [];
+            foreach ($datesArray as $d) {
+                if (!empty($d)) {
+                    $dates[] = Carbon::parse($d)->startOfDay();
+                }
+            }
+        }
+
+        return collect($dates)
+            ->map(fn($d) => $d->startOfDay())
+            ->unique(fn($d) => $d->format('Y-m-d'))
+            ->sort()
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Generate preview information before committing bulk override changes.
+     */
+    public function getBulkOverridePreview(array $params, User $admin): array
+    {
+        $users = $this->resolveBulkOverrideUsers($params);
+        $dates = $this->resolveBulkOverrideDates($params);
+
+        $userIds = $users->pluck('id')->toArray();
+        $dateStrings = collect($dates)->map(fn($d) => $d->format('Y-m-d 00:00:00'))->toArray();
+
+        $employeesSelected = count($userIds);
+        $datesSelected = count($dates);
+        $attendanceRecordsAffected = $employeesSelected * $datesSelected;
+
+        if ($employeesSelected === 0 || $datesSelected === 0) {
+            return [
+                'employees_selected' => $employeesSelected,
+                'dates_selected' => $datesSelected,
+                'attendance_records_affected' => 0,
+                'existing_overrides' => 0,
+                'existing_leave_records' => 0,
+                'records_that_will_change' => 0,
+                'has_conflicts' => false,
+                'conflict_message' => null,
+            ];
+        }
+
+        // Fetch existing attendances and leave requests in batch
+        $existingAttendances = Attendance::whereIn('user_id', $userIds)
+            ->whereIn('date', $dateStrings)
+            ->get()
+            ->groupBy('user_id');
+
+        $minDate = collect($dates)->first()->format('Y-m-d') . ' 00:00:00';
+        $maxDate = collect($dates)->last()->format('Y-m-d') . ' 23:59:59';
+
+        $existingLeaves = \App\Models\LeaveRequest::whereIn('user_id', $userIds)
+            ->where('status', 'approved')
+            ->where('start_date', '<=', $maxDate)
+            ->where('end_date', '>=', $minDate)
+            ->get()
+            ->groupBy('user_id');
+
+        $existingOverrides = 0;
+        $existingLeaveRecords = 0;
+        $recordsThatWillChange = 0;
+        $hasConflicts = false;
+
+        $skipLeaves = (bool) ($params['skip_leaves'] ?? false);
+        $skipOverrides = (bool) ($params['skip_overrides'] ?? false);
+        $conflictHandling = $params['conflict_handling'] ?? 'cancel';
+
+        $status = $params['status'];
+        $classification = $params['classification'] ?? 'full_day';
+
+        if ($status === 'half_day') {
+            $status = 'present';
+            $classification = 'half_day';
+        }
+
+        foreach ($userIds as $userId) {
+            foreach ($dates as $date) {
+                // Check existing attendance record
+                $attendance = null;
+                if (isset($existingAttendances[$userId])) {
+                    $attendance = $existingAttendances[$userId]->first(function ($att) use ($date) {
+                        return Carbon::parse($att->date)->startOfDay()->equalTo($date);
+                    });
+                }
+
+                // Check existing leave request
+                $leave = null;
+                if (isset($existingLeaves[$userId])) {
+                    $leave = $existingLeaves[$userId]->first(function ($l) use ($date) {
+                        $start = Carbon::parse($l->start_date)->startOfDay();
+                        $end = Carbon::parse($l->end_date)->startOfDay();
+                        return $date->greaterThanOrEqualTo($start) && $date->lessThanOrEqualTo($end);
+                    });
+                }
+
+                $hasOverride = $attendance && $attendance->is_overridden;
+                $hasLeave = $leave !== null;
+
+                if ($hasOverride) {
+                    $existingOverrides++;
+                }
+                if ($hasLeave) {
+                    $existingLeaveRecords++;
+                }
+
+                $isConflict = ($hasOverride && !$skipOverrides) || ($hasLeave && !$skipLeaves);
+                if ($isConflict) {
+                    $hasConflicts = true;
+                }
+
+                $shouldSkip = false;
+                if ($skipOverrides && $hasOverride) {
+                    $shouldSkip = true;
+                }
+                if ($skipLeaves && $hasLeave) {
+                    $shouldSkip = true;
+                }
+                if ($conflictHandling === 'skip' && $isConflict) {
+                    $shouldSkip = true;
+                }
+
+                if (!$shouldSkip) {
+                    $targetClassification = $classification;
+                    if ($targetClassification === 'automatic') {
+                        $targetClassification = $attendance ? ($attendance->automatic_classification ?? 'full_day') : 'full_day';
+                    }
+
+                    $willChange = false;
+                    if (!$attendance) {
+                        $willChange = true;
+                    } else {
+                        if ($attendance->status !== $status || $attendance->classification !== $targetClassification || !$attendance->is_overridden) {
+                            $willChange = true;
+                        }
+                    }
+
+                    if ($willChange) {
+                        $recordsThatWillChange++;
+                    }
+                }
+            }
+        }
+
+        $conflictMessage = null;
+        if ($hasConflicts) {
+            $conflictingCount = 0;
+            foreach ($userIds as $userId) {
+                foreach ($dates as $date) {
+                    $attendance = null;
+                    if (isset($existingAttendances[$userId])) {
+                        $attendance = $existingAttendances[$userId]->first(function ($att) use ($date) {
+                            return Carbon::parse($att->date)->startOfDay()->equalTo($date);
+                        });
+                    }
+
+                    $leave = null;
+                    if (isset($existingLeaves[$userId])) {
+                        $leave = $existingLeaves[$userId]->first(function ($l) use ($date) {
+                            $start = Carbon::parse($l->start_date)->startOfDay();
+                            $end = Carbon::parse($l->end_date)->startOfDay();
+                            return $date->greaterThanOrEqualTo($start) && $date->lessThanOrEqualTo($end);
+                        });
+                    }
+
+                    $hasOverride = $attendance && $attendance->is_overridden;
+                    $hasLeave = $leave !== null;
+
+                    if (($hasOverride && !$skipOverrides) || ($hasLeave && !$skipLeaves)) {
+                        $conflictingCount++;
+                    }
+                }
+            }
+
+            if ($conflictingCount > 0) {
+                if ($conflictHandling === 'cancel') {
+                    $conflictMessage = "Error: {$conflictingCount} conflict(s) detected. The operation will be cancelled unless you change conflict handling or skip options.";
+                } elseif ($conflictHandling === 'skip') {
+                    $conflictMessage = "Notice: {$conflictingCount} conflict(s) detected and will be skipped.";
+                } else {
+                    $conflictMessage = "Notice: {$conflictingCount} conflict(s) detected and will be replaced.";
+                }
+            }
+        }
+
+        return [
+            'employees_selected' => $employeesSelected,
+            'dates_selected' => $datesSelected,
+            'attendance_records_affected' => $attendanceRecordsAffected,
+            'existing_overrides' => $existingOverrides,
+            'existing_leave_records' => $existingLeaveRecords,
+            'records_that_will_change' => $recordsThatWillChange,
+            'has_conflicts' => $hasConflicts,
+            'conflict_message' => $conflictMessage,
+        ];
+    }
+
+    /**
+     * Apply bulk attendance overrides with full transaction coverage and validation.
+     */
+    public function applyBulkOverride(array $params, User $admin): array
+    {
+        $users = $this->resolveBulkOverrideUsers($params);
+        $dates = $this->resolveBulkOverrideDates($params);
+
+        $userIds = $users->pluck('id')->toArray();
+        $dateStrings = collect($dates)->map(fn($d) => $d->format('Y-m-d 00:00:00'))->toArray();
+
+        if (count($userIds) === 0 || count($dates) === 0) {
+            throw new \Exception("No employees or dates selected for the override operation.");
+        }
+
+        $skipLeaves = (bool) ($params['skip_leaves'] ?? false);
+        $skipOverrides = (bool) ($params['skip_overrides'] ?? false);
+        $conflictHandling = $params['conflict_handling'] ?? 'cancel';
+
+        $status = $params['status'];
+        $classification = $params['classification'] ?? 'full_day';
+
+        if ($status === 'half_day') {
+            $status = 'present';
+            $classification = 'half_day';
+        }
+
+        $reason = $params['override_reason'] ?? '';
+        if (strlen($reason) < 5) {
+            throw new \Exception("The override reason is mandatory and must be at least 5 characters.");
+        }
+
+        $now = now();
+        $overrideType = 'bulk';
+        if (count($userIds) === 1 && count($dates) === 1) {
+            $overrideType = 'individual';
+        }
+
+        $appliedCount = 0;
+
+        \Illuminate\Support\Facades\DB::transaction(function () use (
+            $users, $dates, $dateStrings, $skipLeaves, $skipOverrides, $conflictHandling,
+            $status, $classification, $reason, $overrideType, $admin, $now, &$appliedCount
+        ) {
+            $minDate = collect($dates)->first()->format('Y-m-d') . ' 00:00:00';
+            $maxDate = collect($dates)->last()->format('Y-m-d') . ' 23:59:59';
+
+            $existingLeaves = \App\Models\LeaveRequest::whereIn('user_id', $users->pluck('id'))
+                ->where('status', 'approved')
+                ->where('start_date', '<=', $maxDate)
+                ->where('end_date', '>=', $minDate)
+                ->get()
+                ->groupBy('user_id');
+
+            foreach ($users as $user) {
+                $lockedUser = User::where('id', $user->id)->lockForUpdate()->firstOrFail();
+
+                $existingAttendances = Attendance::where('user_id', $lockedUser->id)
+                    ->whereIn('date', $dateStrings)
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy(fn($att) => Carbon::parse($att->date)->format('Y-m-d'));
+
+                foreach ($dates as $date) {
+                    $dateStr = $date->format('Y-m-d');
+                    $attendance = $existingAttendances->get($dateStr);
+
+                    $leave = null;
+                    if (isset($existingLeaves[$lockedUser->id])) {
+                        $leave = $existingLeaves[$lockedUser->id]->first(function ($l) use ($date) {
+                            $start = Carbon::parse($l->start_date)->startOfDay();
+                            $end = Carbon::parse($l->end_date)->startOfDay();
+                            return $date->greaterThanOrEqualTo($start) && $date->lessThanOrEqualTo($end);
+                        });
+                    }
+
+                    $hasOverride = $attendance && $attendance->is_overridden;
+                    $hasLeave = $leave !== null;
+
+                    $isConflict = ($hasOverride && !$skipOverrides) || ($hasLeave && !$skipLeaves);
+                    if ($isConflict && $conflictHandling === 'cancel') {
+                        throw new \Exception("Operation cancelled due to conflict for employee {$lockedUser->name} ({$lockedUser->employee_id}) on {$dateStr}.");
+                    }
+
+                    $shouldSkip = false;
+                    if ($skipOverrides && $hasOverride) {
+                        $shouldSkip = true;
+                    }
+                    if ($skipLeaves && $hasLeave) {
+                        $shouldSkip = true;
+                    }
+                    if ($conflictHandling === 'skip' && $isConflict) {
+                        $shouldSkip = true;
+                    }
+
+                    if ($shouldSkip) {
+                        continue;
+                    }
+
+                    // 1. Calculate already deducted amount
+                    $alreadyDeducted = 0.0;
+                    if ($attendance && $attendance->status === 'paid_leave') {
+                        $alreadyDeducted = $attendance->classification === 'half_day' ? 0.5 : 1.0;
+                    } else {
+                        if ($leave && $leave->leave_type !== 'complimentary' && $leave->is_paid) {
+                            $alreadyDeducted = 1.0;
+                        }
+                    }
+
+                    // Resolve target classification for deduction checking
+                    $targetClassification = $classification;
+                    if ($targetClassification === 'automatic' || empty($targetClassification)) {
+                        $targetClassification = $attendance ? ($attendance->automatic_classification ?? 'full_day') : 'full_day';
+                    }
+
+                    // 2. Calculate target deduction amount
+                    $targetDeduction = 0.0;
+                    if ($status === 'paid_leave') {
+                        $targetDeduction = $targetClassification === 'half_day' ? 0.5 : 1.0;
+                    }
+
+                    $adjustment = $alreadyDeducted - $targetDeduction;
+
+                    // 3. Negative Balance Policy check
+                    if ($adjustment < 0.0) {
+                        $allowNegative = (bool) config('attendance.allow_negative_leave_balance', true);
+                        $netDeductionAmount = abs($adjustment);
+                        if (!$allowNegative && ($lockedUser->leave_balance - $netDeductionAmount < 0.0)) {
+                            throw new \Exception("Insufficient leave balance for {$lockedUser->name} ({$lockedUser->employee_id}). Balance is {$lockedUser->leave_balance} but this override requires deducting {$netDeductionAmount} leave day(s).");
+                        }
+                    }
+
+                    // 4. Save Ledger Entry and update User balance if adjustment is non-zero
+                    if ($adjustment != 0.0) {
+                        $lockedUser->leave_balance += $adjustment;
+                        $lockedUser->save();
+
+                        \App\Models\LeaveLedgerEntry::create([
+                            'user_id' => $lockedUser->id,
+                            'amount' => $adjustment,
+                            'type' => 'adjustment',
+                            'description' => "Adjustment due to attendance override on " . $dateStr . " to status: {$status} (classification: {$targetClassification})",
+                        ]);
+                    }
+
+                    // Preserve original computed values if not already overridden
+                    if (!$attendance) {
+                        $isWeeklyOff = \App\Services\AttendanceTimingResolver::isWeeklyOff($date);
+                        $autoStatus = $leave ? ($leave->leave_type === 'work_from_home' ? 'wfh' : 'on_leave') : ($isWeeklyOff ? 'weekly_off' : 'absent');
+                        $autoClassification = 'full_day';
+
+                        $attendance = new Attendance([
+                            'user_id' => $lockedUser->id,
+                            'date' => $date,
+                            'automatic_status' => $autoStatus,
+                            'automatic_classification' => $autoClassification,
+                            'automatic_classification_reason' => null,
+                        ]);
+                    } else {
+                        if (is_null($attendance->automatic_status)) {
+                            $attendance->automatic_status = $attendance->status;
+                        }
+                        if (is_null($attendance->automatic_classification)) {
+                            $attendance->automatic_classification = $attendance->classification;
+                        }
+                    }
+
+                    $attendance->status = $status;
+                    $attendance->classification = $targetClassification;
+                    $attendance->is_overridden = true;
+                    $attendance->overridden_by = $admin->id;
+                    $attendance->overridden_at = $now;
+                    $attendance->override_reason = $reason;
+                    $attendance->override_type = $overrideType;
+                    $attendance->save();
+
+                    $appliedCount++;
+                }
+            }
+        });
+
+        return [
+            'applied_count' => $appliedCount,
+        ];
+    }
 }

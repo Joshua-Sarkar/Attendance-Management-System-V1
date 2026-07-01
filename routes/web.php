@@ -92,6 +92,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/admin/import-employees', [ImportController::class, 'handleUpload'])->name('admin.import.handle');
         Route::post('/admin/employees/{user}/reset-password', [EmployeeController::class, 'resetPassword'])->name('admin.employees.reset-password');
         Route::get('/admin/attendance-logs', [AttendanceAuditController::class, 'index'])->name('admin.attendance.logs');
+        Route::get('/admin/attendance/overrides/employees', [\App\Http\Controllers\AttendanceOverrideController::class, 'employees'])->name('admin.attendance.override.employees');
+        Route::post('/admin/attendance/overrides/preview', [\App\Http\Controllers\AttendanceOverrideController::class, 'preview'])->name('admin.attendance.override.preview');
         Route::post('/admin/attendance/overrides', [\App\Http\Controllers\AttendanceOverrideController::class, 'store'])->name('admin.attendance.override.store');
     });
 

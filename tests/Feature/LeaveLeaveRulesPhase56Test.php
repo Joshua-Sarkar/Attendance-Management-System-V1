@@ -267,4 +267,37 @@ class LeaveLeaveRulesPhase56Test extends TestCase
         $this->assertEquals('half_day', $attendance->classification);
         $this->assertTrue($attendance->is_overridden);
     }
+
+    /** @test */
+    public function unplanned_leave_creation_and_approval_does_not_deduct_regular_balance(): void
+    {
+        // 1. Submit Unplanned Leave as Employee (Starts as Pending)
+        $empDate = Carbon::today()->addDays(5)->format('Y-m-d');
+        $responseEmp = $this->actingAs($this->employee)->post(route('leaves.store'), [
+            'leave_type' => 'unplanned',
+            'start_date' => $empDate,
+            'end_date' => $empDate,
+            'reason' => 'Unplanned emergency test',
+        ]);
+
+        $responseEmp->assertRedirect();
+        $requestEmp = LeaveRequest::where('user_id', $this->employee->id)->where('status', 'pending')->first();
+        $this->assertNotNull($requestEmp);
+        $this->assertFalse($requestEmp->is_paid);
+
+        // Approve it as manager
+        $this->actingAs($this->manager)->post(route('leaves.approve', $requestEmp), [
+            'notes' => 'Okay approved.',
+        ]);
+
+        $this->employee->refresh();
+        $this->assertEquals(10.00, $this->employee->leave_balance); // Balance not deducted
+
+        $requestEmp->refresh();
+        $this->assertEquals('approved', $requestEmp->status);
+
+        $ledgerEmp = LeaveLedgerEntry::where('leave_request_id', $requestEmp->id)->first();
+        $this->assertNotNull($ledgerEmp);
+        $this->assertEquals(0.00, $ledgerEmp->amount);
+    }
 }

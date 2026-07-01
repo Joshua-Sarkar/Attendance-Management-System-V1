@@ -260,166 +260,547 @@
 
         <!-- Tab 2: Attendance Override Management (Inline Redesigned Workspace) -->
         <div x-show="activeTab === 'override'" class="p-6 bg-surface-raised/30 rounded border border-hairline font-sans" x-cloak>
-            <form method="POST" action="{{ route('admin.attendance.override.store') }}" class="space-y-6">
-                @csrf
-                <div class="flex flex-col gap-1.5 mb-4 border-b border-hairline/10 pb-4">
-                    <h3 class="text-lg font-medium text-vellum font-display">Attendance Override Workspace</h3>
-                    <p class="text-xs text-vellum-muted">Apply attendance status overrides to single employees, multiple employees, departments, or the entire organization.</p>
-                </div>
+            <div x-data="{
+                step: 1,
+                scopeType: 'employee',
+                selectedEmployeeIds: @js($selectEmployeeId ? [(string)$selectEmployeeId] : []),
+                selectedDeptIds: [],
+                employeeSearch: '',
+                employees: [],
+                dateMode: 'single',
+                singleDate: @js($date),
+                startDate: @js($date),
+                endDate: @js($date),
+                workingDaysOnly: true,
+                includeSundays: false,
+                skipLeaves: false,
+                skipOverrides: false,
+                multipleDates: [],
+                newMultipleDate: '',
+                status: 'present',
+                classification: 'automatic',
+                overrideReason: '',
+                conflictHandling: 'cancel',
+                loadingPreview: false,
+                previewError: null,
+                previewData: {},
+                errorText: null,
 
-                <div x-data="{
-                    selectedDeptIds: [],
-                    selectedEmployees: @js($selectEmployeeId ? [(string)$selectEmployeeId] : []),
-                    prevDeptIds: [],
-                    employeeSearch: '',
-                    employees: @js($employees->map(fn($e) => ['id' => (string)$e->id, 'name' => $e->name, 'employee_id' => $e->employee_id, 'dept_id' => (string)$e->department_id])),
-                    
-                    syncEmployeesFromDepts() {
-                        const currentDepts = this.selectedDeptIds;
-                        const addedDepts = currentDepts.filter(id => !this.prevDeptIds.includes(id));
-                        const removedDepts = this.prevDeptIds.filter(id => !currentDepts.includes(id));
-                        
-                        addedDepts.forEach(deptId => {
-                            this.employees.forEach(emp => {
-                                if (emp.dept_id == deptId && !this.selectedEmployees.includes(emp.id)) {
-                                    this.selectedEmployees.push(emp.id);
-                                }
-                            });
+                init() {
+                    fetch('{{ route('admin.attendance.override.employees') }}')
+                        .then(res => res.json())
+                        .then(data => {
+                            this.employees = data;
                         });
-                        
-                        removedDepts.forEach(deptId => {
-                            this.selectedEmployees = this.selectedEmployees.filter(empId => {
-                                const emp = this.employees.find(e => e.id == empId);
-                                return !emp || emp.dept_id != deptId;
-                            });
-                        });
-                        
-                        this.prevDeptIds = [...currentDepts];
-                    },
-                    
-                    toggleAllDepts() {
-                        const allDeptIds = [...new Set(this.employees.map(e => e.dept_id).filter(Boolean))];
-                        if (this.selectedDeptIds.length === allDeptIds.length) {
-                            this.selectedDeptIds = [];
+
+                    this.$watch('status', value => {
+                        if (value === 'half_day') {
+                            this.classification = 'half_day';
                         } else {
-                            this.selectedDeptIds = allDeptIds;
+                            this.classification = 'full_day';
                         }
-                        this.syncEmployeesFromDepts();
-                    },
-                    
-                    selectEntireOrg() {
-                        this.selectedEmployees = this.employees.map(e => e.id);
-                        this.selectedDeptIds = [...new Set(this.employees.map(e => e.dept_id).filter(Boolean))];
-                        this.prevDeptIds = [...this.selectedDeptIds];
-                    },
-                    
-                    clearSelection() {
-                        this.selectedEmployees = [];
-                        this.selectedDeptIds = [];
-                        this.prevDeptIds = [];
-                    },
-                    
-                    matchesSearch(emp) {
-                        if (!this.employeeSearch) return true;
-                        const query = this.employeeSearch.toLowerCase();
-                        return emp.name.toLowerCase().includes(query) || emp.employee_id.toLowerCase().includes(query);
+                    });
+                },
+
+                toggleEmployeeSelection(id) {
+                    id = String(id);
+                    if (this.selectedEmployeeIds.includes(id)) {
+                        this.selectedEmployeeIds = this.selectedEmployeeIds.filter(x => x !== id);
+                    } else {
+                        this.selectedEmployeeIds.push(id);
                     }
-                }" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                    
-                    <!-- Left: Form Parameters (Col span 5) -->
-                    <div class="lg:col-span-5 space-y-4 bg-walnut/[0.05] p-5 rounded border border-hairline/10">
-                        <div class="text-sm font-semibold text-vellum-faint uppercase tracking-wider mb-2">Override Parameters</div>
-                        
-                        <!-- Date Input -->
-                        <div>
-                            <x-input-label for="bulk_override_date_inline" value="Target Date" />
-                            <input type="date" name="date" id="bulk_override_date_inline" value="{{ $date }}" required class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
+                },
+
+                toggleAllDepts() {
+                    const allDeptIds = [...new Set(this.employees.map(e => e.dept_id).filter(Boolean))].map(String);
+                    if (this.selectedDeptIds.length === allDeptIds.length) {
+                        this.selectedDeptIds = [];
+                    } else {
+                        this.selectedDeptIds = allDeptIds;
+                    }
+                },
+
+                matchesSearch(emp) {
+                    if (!this.employeeSearch) return false;
+                    const q = this.employeeSearch.toLowerCase();
+                    return emp.name.toLowerCase().includes(q) || emp.employee_id.toLowerCase().includes(q);
+                },
+
+                getEmployeeCount() {
+                    if (this.scopeType === 'all') return this.employees.length;
+                    if (this.scopeType === 'department') {
+                        const deptIds = this.selectedDeptIds.map(String);
+                        return this.employees.filter(e => deptIds.includes(String(e.dept_id))).length;
+                    }
+                    return this.selectedEmployeeIds.length;
+                },
+
+                addMultipleDate() {
+                    if (this.newMultipleDate && !this.multipleDates.includes(this.newMultipleDate)) {
+                        this.multipleDates.push(this.newMultipleDate);
+                        this.newMultipleDate = '';
+                    }
+                },
+
+                removeMultipleDate(idx) {
+                    this.multipleDates.splice(idx, 1);
+                },
+
+                nextStep() {
+                    this.errorText = null;
+                    if (this.step === 1) {
+                        if (this.scopeType === 'employee' && this.selectedEmployeeIds.length === 0) {
+                            this.errorText = 'Please select at least one employee.';
+                            return;
+                        }
+                        if (this.scopeType === 'department' && this.selectedDeptIds.length === 0) {
+                            this.errorText = 'Please select at least one department.';
+                            return;
+                        }
+                    } else if (this.step === 2) {
+                        if (this.dateMode === 'single' && !this.singleDate) {
+                            this.errorText = 'Please select a date.';
+                            return;
+                        }
+                        if (this.dateMode === 'range' && (!this.startDate || !this.endDate)) {
+                            this.errorText = 'Please select start and end dates.';
+                            return;
+                        }
+                        if (this.dateMode === 'multiple' && this.multipleDates.length === 0) {
+                            this.errorText = 'Please add at least one date.';
+                            return;
+                        }
+                    } else if (this.step === 3) {
+                        if (this.overrideReason.trim().length < 5) {
+                            this.errorText = 'Please provide an override reason (minimum 5 characters).';
+                            return;
+                        }
+                    }
+                    this.step++;
+                    if (this.step === 4) {
+                        this.loadPreview();
+                    }
+                },
+
+                prevStep() {
+                    this.errorText = null;
+                    this.step--;
+                },
+
+                loadPreview() {
+                    this.loadingPreview = true;
+                    this.previewError = null;
+
+                    const payload = {
+                        _token: '{{ csrf_token() }}',
+                        scope_type: this.scopeType,
+                        employee_ids: this.selectedEmployeeIds,
+                        department_ids: this.selectedDeptIds,
+                        date_mode: this.dateMode,
+                        date: this.singleDate,
+                        start_date: this.startDate,
+                        end_date: this.endDate,
+                        dates: this.multipleDates,
+                        working_days_only: this.workingDaysOnly,
+                        include_sundays: this.includeSundays,
+                        skip_leaves: this.skipLeaves,
+                        skip_overrides: this.skipOverrides,
+                        status: this.status,
+                        classification: this.classification,
+                        override_reason: this.overrideReason,
+                        conflict_handling: this.conflictHandling
+                    };
+
+                    fetch('{{ route('admin.attendance.override.preview') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(res => {
+                        if (!res.ok) {
+                            return res.json().then(err => { throw new Error(err.error || err.message || 'Validation failed'); });
+                        }
+                        return res.json();
+                    })
+                    .then(data => {
+                        this.previewData = data;
+                        this.loadingPreview = false;
+                    })
+                    .catch(err => {
+                        this.previewError = err.message;
+                        this.loadingPreview = false;
+                    });
+                }
+            }">
+                <form method="POST" action="{{ route('admin.attendance.override.store') }}" class="space-y-6">
+                    @csrf
+
+                    <!-- Hidden Inputs for Form Submission -->
+                    <input type="hidden" name="scope_type" :value="scopeType">
+                    <template x-for="empId in selectedEmployeeIds" :key="'emp-' + empId">
+                        <input type="hidden" name="employee_ids[]" :value="empId">
+                    </template>
+                    <template x-for="deptId in selectedDeptIds" :key="'dept-' + deptId">
+                        <input type="hidden" name="department_ids[]" :value="deptId">
+                    </template>
+                    <input type="hidden" name="date_mode" :value="dateMode">
+                    <input type="hidden" name="date" :value="singleDate">
+                    <input type="hidden" name="start_date" :value="startDate">
+                    <input type="hidden" name="end_date" :value="endDate">
+                    <template x-for="d in multipleDates" :key="'date-' + d">
+                        <input type="hidden" name="dates[]" :value="d">
+                    </template>
+                    <input type="hidden" name="working_days_only" :value="workingDaysOnly ? 1 : 0">
+                    <input type="hidden" name="include_sundays" :value="includeSundays ? 1 : 0">
+                    <input type="hidden" name="skip_leaves" :value="skipLeaves ? 1 : 0">
+                    <input type="hidden" name="skip_overrides" :value="skipOverrides ? 1 : 0">
+                    <input type="hidden" name="status" :value="status">
+                    <input type="hidden" name="classification" :value="classification">
+                    <input type="hidden" name="override_reason" :value="overrideReason">
+                    <input type="hidden" name="conflict_handling" :value="conflictHandling">
+
+                    <div class="flex flex-col gap-1.5 mb-4 border-b border-hairline/10 pb-4">
+                        <h3 class="text-lg font-medium text-vellum font-display">Attendance Override Workspace</h3>
+                        <p class="text-xs text-vellum-muted">Apply attendance status overrides to single employees, multiple employees, departments, or the entire organization.</p>
+                    </div>
+
+                    <!-- Steps Progress Tracker -->
+                    <div class="flex items-center justify-between border-b border-hairline/10 pb-4 mb-6">
+                        <div class="flex items-center gap-2">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm transition" :class="step === 1 ? 'bg-brass text-canvas font-bold' : 'bg-surface-raised text-vellum-muted border border-hairline'">1</span>
+                            <span class="text-sm font-semibold" :class="step === 1 ? 'text-brass-bright' : 'text-vellum-muted'">Scope</span>
+                        </div>
+                        <div class="h-px bg-hairline/20 flex-1 mx-4"></div>
+                        <div class="flex items-center gap-2">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm transition" :class="step === 2 ? 'bg-brass text-canvas font-bold' : 'bg-surface-raised text-vellum-muted border border-hairline'">2</span>
+                            <span class="text-sm font-semibold" :class="step === 2 ? 'text-brass-bright' : 'text-vellum-muted'">When</span>
+                        </div>
+                        <div class="h-px bg-hairline/20 flex-1 mx-4"></div>
+                        <div class="flex items-center gap-2">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm transition" :class="step === 3 ? 'bg-brass text-canvas font-bold' : 'bg-surface-raised text-vellum-muted border border-hairline'">3</span>
+                            <span class="text-sm font-semibold" :class="step === 3 ? 'text-brass-bright' : 'text-vellum-muted'">What</span>
+                        </div>
+                        <div class="h-px bg-hairline/20 flex-1 mx-4"></div>
+                        <div class="flex items-center gap-2">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm transition" :class="step === 4 ? 'bg-brass text-canvas font-bold' : 'bg-surface-raised text-vellum-muted border border-hairline'">4</span>
+                            <span class="text-sm font-semibold" :class="step === 4 ? 'text-brass-bright' : 'text-vellum-muted'">Review</span>
+                        </div>
+                    </div>
+
+                    <!-- STEP 1: Scope (Who) -->
+                    <div x-show="step === 1" class="space-y-6">
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-vellum block mb-1">1. Select Target Scope (Who)</label>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <label class="flex flex-col p-4 bg-surface rounded border hover:border-brass/50 cursor-pointer transition relative" :class="scopeType === 'employee' ? 'border-brass bg-brass/[0.03]' : 'border-hairline'">
+                                    <input type="radio" value="employee" x-model="scopeType" class="sr-only">
+                                    <span class="font-bold text-vellum text-sm">Employees Selection</span>
+                                    <span class="text-[11px] text-vellum-muted mt-1 leading-relaxed">Search and select one or multiple individual employees.</span>
+                                </label>
+                                <label class="flex flex-col p-4 bg-surface rounded border hover:border-brass/50 cursor-pointer transition relative" :class="scopeType === 'department' ? 'border-brass bg-brass/[0.03]' : 'border-hairline'">
+                                    <input type="radio" value="department" x-model="scopeType" class="sr-only">
+                                    <span class="font-bold text-vellum text-sm">Department Scope</span>
+                                    <span class="text-[11px] text-vellum-muted mt-1 leading-relaxed">Target all employees belonging to selected departments.</span>
+                                </label>
+                                <label class="flex flex-col p-4 bg-surface rounded border hover:border-brass/50 cursor-pointer transition relative" :class="scopeType === 'all' ? 'border-brass bg-brass/[0.03]' : 'border-hairline'">
+                                    <input type="radio" value="all" x-model="scopeType" class="sr-only">
+                                    <span class="font-bold text-vellum text-sm">Entire Organization</span>
+                                    <span class="text-[11px] text-vellum-muted mt-1 leading-relaxed">Override attendance for all active employees organization-wide.</span>
+                                </label>
+                            </div>
                         </div>
 
-                        <!-- Override Status -->
+                        <!-- Employee Search (Who: Employees selection) -->
+                        <div x-show="scopeType === 'employee'" class="space-y-4" x-cloak>
+                            <div class="space-y-2">
+                                <x-input-label value="Search Employee Names / IDs" />
+                                <div class="relative" x-data="{ openDropdown: false }" @click.outside="openDropdown = false">
+                                    <input type="text" x-model="employeeSearch" @focus="openDropdown = true" placeholder="Type name or ID to filter..." class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
+
+                                    <div x-show="openDropdown && employeeSearch.trim().length > 0" class="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto bg-surface-raised border border-hairline rounded shadow-lg divide-y divide-hairline/10" x-cloak>
+                                        <template x-for="emp in employees.filter(e => matchesSearch(e))" :key="emp.id">
+                                            <button type="button" @click="toggleEmployeeSelection(emp.id); employeeSearch = ''; openDropdown = false" class="w-full text-left px-4 py-2.5 text-sm hover:bg-brass/[0.06] transition flex justify-between items-center text-vellum">
+                                                <div>
+                                                    <span class="font-semibold block" x-text="emp.name"></span>
+                                                    <span class="text-xs font-mono text-vellum-muted" x-text="emp.employee_id"></span>
+                                                </div>
+                                                <span class="text-[10px] font-bold uppercase tracking-wider text-brass" x-text="selectedEmployeeIds.includes(emp.id) ? 'Selected' : 'Select'"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-between items-center text-xs font-medium border border-hairline rounded bg-surface p-3 font-mono text-brass-bright bg-brass/[0.03] border-brass/10">
+                                <span>Selection Scope Summary:</span>
+                                <span class="font-bold" x-text="selectedEmployeeIds.length + ' Employee(s) Selected'"></span>
+                            </div>
+
+                            <!-- Selected List Details collapsible tag container -->
+                            <div x-show="selectedEmployeeIds.length > 0" x-data="{ showList: false }">
+                                <button type="button" @click="showList = !showList" class="text-[11px] text-brass uppercase font-bold hover:underline mb-2 flex items-center gap-1 font-mono">
+                                    <span x-text="showList ? '[-] Hide selection details' : '[+] View selection details'"></span>
+                                </button>
+                                <div x-show="showList" class="flex flex-wrap gap-1.5 p-3 bg-surface rounded border border-hairline/10 max-h-40 overflow-y-auto font-sans">
+                                    <template x-for="empId in selectedEmployeeIds" :key="empId">
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-semibold bg-brass/10 text-brass border border-brass/20">
+                                            <span x-text="employees.find(e => e.id == empId)?.name || 'Unknown'"></span>
+                                            <button type="button" @click="toggleEmployeeSelection(empId)" class="hover:text-burgundy font-bold text-xs select-none">&times;</button>
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Department checkboxes (Who: Departments scope) -->
+                        <div x-show="scopeType === 'department'" class="space-y-4" x-cloak>
+                            <div class="space-y-2 border border-hairline p-4 rounded bg-surface font-sans">
+                                <div class="flex items-center justify-between border-b border-hairline/10 pb-1.5 mb-2 font-mono">
+                                    <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Select Target Departments</span>
+                                    <button type="button" @click="toggleAllDepts()" class="text-[10px] uppercase font-bold text-brass hover:underline">Toggle All</button>
+                                </div>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    @foreach($departments as $dept)
+                                        <label class="flex items-center gap-2.5 text-[13.5px] text-vellum cursor-pointer select-none">
+                                            <input type="checkbox" value="{{ $dept->id }}" x-model="selectedDeptIds" class="rounded bg-surface-raised border-hairline text-brass focus:ring-brass w-4 h-4">
+                                            <span>{{ $dept->name }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <div class="flex justify-between items-center text-xs font-medium border border-hairline rounded bg-surface p-3 font-mono text-brass-bright bg-brass/[0.03] border-brass/10">
+                                <span>Selection Scope Summary:</span>
+                                <span class="font-bold" x-text="getEmployeeCount() + ' Employee(s) Selected (in ' + selectedDeptIds.length + ' Department(s))'"></span>
+                            </div>
+                        </div>
+
+                        <!-- Organization scope summary -->
+                        <div x-show="scopeType === 'all'" class="space-y-4" x-cloak>
+                            <div class="flex justify-between items-center text-xs font-medium border border-hairline rounded bg-surface p-3 font-mono text-brass-bright bg-brass/[0.03] border-brass/10">
+                                <span>Selection Scope Summary:</span>
+                                <span class="font-bold" x-text="getEmployeeCount() + ' Employee(s) Selected (All Active Organization)'"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: Date Selection (When) -->
+                    <div x-show="step === 2" class="space-y-6" x-cloak>
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-vellum block mb-1">2. Select Date Option (When)</label>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <label class="flex flex-col p-4 bg-surface rounded border hover:border-brass/50 cursor-pointer transition" :class="dateMode === 'single' ? 'border-brass bg-brass/[0.03]' : 'border-hairline'">
+                                    <input type="radio" value="single" x-model="dateMode" class="sr-only">
+                                    <span class="font-bold text-vellum text-sm">Single Date</span>
+                                    <span class="text-[11px] text-vellum-muted mt-1 leading-relaxed">Override attendance parameters for a single day.</span>
+                                </label>
+                                <label class="flex flex-col p-4 bg-surface rounded border hover:border-brass/50 cursor-pointer transition" :class="dateMode === 'range' ? 'border-brass bg-brass/[0.03]' : 'border-hairline'">
+                                    <input type="radio" value="range" x-model="dateMode" class="sr-only">
+                                    <span class="font-bold text-vellum text-sm">Date Range</span>
+                                    <span class="text-[11px] text-vellum-muted mt-1 leading-relaxed">Override parameters across a continuous range of dates.</span>
+                                </label>
+                                <label class="flex flex-col p-4 bg-surface rounded border hover:border-brass/50 cursor-pointer transition" :class="dateMode === 'multiple' ? 'border-brass bg-brass/[0.03]' : 'border-hairline'">
+                                    <input type="radio" value="multiple" x-model="dateMode" class="sr-only">
+                                    <span class="font-bold text-vellum text-sm">Multiple Individual Dates</span>
+                                    <span class="text-[11px] text-vellum-muted mt-1 leading-relaxed">Override parameters for separate distinct days.</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Single Date Input -->
+                        <div x-show="dateMode === 'single'" class="space-y-4" x-cloak>
+                            <div>
+                                <x-input-label for="single_date" value="Target Override Date" />
+                                <input type="date" x-model="singleDate" id="single_date" class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Date Range Inputs -->
+                        <div x-show="dateMode === 'range'" class="space-y-4" x-cloak>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <x-input-label for="start_date" value="Start Date" />
+                                    <input type="date" x-model="startDate" id="start_date" class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
+                                </div>
+                                <div>
+                                    <x-input-label for="end_date" value="End Date" />
+                                    <input type="date" x-model="endDate" id="end_date" class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
+                                </div>
+                            </div>
+
+                            <!-- Options Checklist for Date Range -->
+                            <div class="space-y-2 border border-hairline p-4 rounded bg-surface">
+                                <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider block mb-2">Override Options & Rules</span>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 font-sans">
+                                    <label class="flex items-center gap-2.5 text-[13px] text-vellum cursor-pointer select-none">
+                                        <input type="checkbox" x-model="workingDaysOnly" class="rounded bg-surface-raised border-hairline text-brass focus:ring-brass w-4 h-4">
+                                        <span>Working Days Only</span>
+                                    </label>
+                                    <label class="flex items-center gap-2.5 text-[13px] text-vellum cursor-pointer select-none">
+                                        <input type="checkbox" x-model="includeSundays" class="rounded bg-surface-raised border-hairline text-brass focus:ring-brass w-4 h-4">
+                                        <span>Include Sundays</span>
+                                    </label>
+                                    <label class="flex items-center gap-2.5 text-[13px] text-vellum cursor-pointer select-none">
+                                        <input type="checkbox" x-model="skipLeaves" class="rounded bg-surface-raised border-hairline text-brass focus:ring-brass w-4 h-4">
+                                        <span>Skip Existing Leave Records</span>
+                                    </label>
+                                    <label class="flex items-center gap-2.5 text-[13px] text-vellum cursor-pointer select-none">
+                                        <input type="checkbox" x-model="skipOverrides" class="rounded bg-surface-raised border-hairline text-brass focus:ring-brass w-4 h-4">
+                                        <span>Skip Existing Overrides</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Multiple Dates List Workflow -->
+                        <div x-show="dateMode === 'multiple'" class="space-y-4" x-cloak>
+                            <div class="flex gap-2 items-end">
+                                <div class="flex-1">
+                                    <x-input-label for="new_multiple_date" value="Select & Add Date" />
+                                    <input type="date" x-model="newMultipleDate" id="new_multiple_date" class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
+                                </div>
+                                <button type="button" @click="addMultipleDate()" class="bg-brass text-vellum font-bold py-2 px-4 rounded text-xs uppercase tracking-wider hover:bg-brass/90 transition duration-150 h-[38px] shadow-sm select-none">
+                                    + Add Date
+                                </button>
+                            </div>
+
+                            <div x-show="multipleDates.length > 0" class="space-y-2">
+                                <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider block">Selected Dates List</span>
+                                <div class="flex flex-wrap gap-1.5 p-3 bg-surface rounded border border-hairline/10 max-h-40 overflow-y-auto">
+                                    <template x-for="(d, idx) in multipleDates" :key="d">
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-semibold bg-brass/10 text-brass border border-brass/20">
+                                            <span x-text="d"></span>
+                                            <button type="button" @click="removeMultipleDate(idx)" class="hover:text-burgundy font-bold text-xs select-none">&times;</button>
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: Override Action (What) & Reason -->
+                    <div x-show="step === 3" class="space-y-6" x-cloak>
+                        <label class="text-sm font-semibold text-vellum block mb-1">3. Select Action & Reason (What)</label>
+                        <div class="space-y-4">
+                            <!-- Override Action -->
+                            <div>
+                                <x-input-label for="override_status" value="Override Action" />
+                                <select x-model="status" id="override_status" class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
+                                    <option value="present">Present</option>
+                                    <option value="half_day">Half Day</option>
+                                    <option value="paid_leave">Paid Leave</option>
+                                    <option value="unpaid_leave">Unpaid Leave</option>
+                                    <option value="weekly_off">Weekly Off</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Conflict Handling -->
                         <div>
-                            <x-input-label for="bulk_status_inline" value="Override Status" />
-                            <select name="status" id="bulk_status_inline" class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
-                                <option value="present">Present</option>
-                                <option value="half_day">Half Day</option>
-                                <option value="absent">Absent</option>
-                                <option value="weekly_off">Weekly Off</option>
-                                <option value="paid_leave">Paid Leave</option>
-                                <option value="unpaid_leave">Unpaid Leave</option>
-                                <option value="wfh">Work From Home</option>
+                            <x-input-label for="conflict_handling_select" value="Conflict Handling Strategy" />
+                            <select x-model="conflictHandling" id="conflict_handling_select" class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
+                                <option value="skip">Skip conflicting records (Do not write over pre-existing leaves/overrides)</option>
+                                <option value="replace">Replace existing overrides (Overwrite pre-existing records)</option>
+                                <option value="cancel">Cancel operation (Prevent override if any conflict exists)</option>
                             </select>
                         </div>
 
                         <!-- Override Reason -->
                         <div>
-                            <x-input-label for="bulk_override_reason_inline" value="Override Reason (mandatory)" />
-                            <textarea name="override_reason" id="bulk_override_reason_inline" rows="4" required minlength="5" placeholder="Minimum 5 characters describing reason for audit log..." class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none"></textarea>
-                        </div>
-
-                        <div class="pt-4 border-t border-hairline/10 flex justify-end">
-                            <x-primary-button type="submit" class="w-full justify-center">
-                                Apply Override Configuration
-                            </x-primary-button>
+                            <x-input-label for="override_reason_textarea" value="Override Reason (mandatory)" />
+                            <textarea x-model="overrideReason" id="override_reason_textarea" rows="3" minlength="5" placeholder="Minimum 5 characters describing reason for audit trail log..." class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none"></textarea>
                         </div>
                     </div>
 
-                    <!-- Right: Scope / Employees Selection (Col span 7) -->
-                    <div class="lg:col-span-7 space-y-4">
-                        
-                        <!-- Multiple Departments Selection Checkboxes -->
-                        <div class="space-y-2 border border-hairline p-4 rounded bg-surface">
-                            <div class="flex items-center justify-between border-b border-hairline/10 pb-1.5 mb-2">
-                                <span class="text-xs font-semibold text-vellum-faint uppercase tracking-wider">Select Department Scope</span>
-                                <button type="button" @click="toggleAllDepts()" class="text-[10px] uppercase font-bold text-brass hover:underline">Toggle All</button>
-                            </div>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                @foreach($departments as $dept)
-                                    <label class="flex items-center gap-2.5 text-[13.5px] text-vellum cursor-pointer select-none">
-                                        <input type="checkbox" value="{{ $dept->id }}" x-model="selectedDeptIds" @change="syncEmployeesFromDepts()" class="rounded bg-surface-raised border-hairline text-brass focus:ring-brass w-4 h-4">
-                                        <span>{{ $dept->name }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
+                    <!-- STEP 4: Preview Before Apply -->
+                    <div x-show="step === 4" class="space-y-6" x-cloak>
+                        <label class="text-sm font-semibold text-vellum block mb-1">4. Review Preview & Apply</label>
+
+                        <!-- Loading Indicator -->
+                        <div x-show="loadingPreview" class="flex flex-col items-center justify-center py-12 space-y-3" x-cloak>
+                            <svg class="animate-spin h-8 w-8 text-brass" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span class="text-sm text-vellum-muted font-mono">Evaluating configuration and scanning conflicts...</span>
                         </div>
 
-                        <!-- Employees Checklist -->
-                        <div class="space-y-2">
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                <x-input-label value="Target Employees Selection" />
-                                <div class="flex flex-wrap gap-2">
-                                    <button type="button" @click="selectEntireOrg()" class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-brass/10 hover:bg-brass/25 text-brass rounded transition duration-150">
-                                        Entire Org
-                                    </button>
-                                    <button type="button" @click="clearSelection()" class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-burgundy/10 hover:bg-burgundy/25 text-burgundy rounded transition duration-150">
-                                        Clear Selection
-                                    </button>
+                        <!-- Preview Error Alert -->
+                        <div x-show="!loadingPreview && previewError" class="bg-burgundy-bg text-burgundy border border-burgundy/30 px-4 py-3 rounded text-sm font-medium" x-cloak>
+                            <span x-text="previewError"></span>
+                        </div>
+
+                        <!-- Preview Success / Metrics -->
+                        <div x-show="!loadingPreview && !previewError" class="space-y-6" x-cloak>
+                            <!-- Metrics Cards Grid -->
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div class="bg-surface-raised/40 p-4 rounded border border-hairline text-center">
+                                    <span class="text-[10px] font-bold text-vellum-muted uppercase tracking-wider block">Employees Selected</span>
+                                    <span class="text-3xl font-display font-medium text-brass-bright mt-1 block" x-text="previewData.employees_selected"></span>
+                                </div>
+                                <div class="bg-surface-raised/40 p-4 rounded border border-hairline text-center">
+                                    <span class="text-[10px] font-bold text-vellum-muted uppercase tracking-wider block">Dates Selected</span>
+                                    <span class="text-3xl font-display font-medium text-brass-bright mt-1 block" x-text="previewData.dates_selected"></span>
+                                </div>
+                                <div class="bg-surface-raised/40 p-4 rounded border border-hairline text-center">
+                                    <span class="text-[10px] font-bold text-vellum-muted uppercase tracking-wider block">Attendance Records Affected</span>
+                                    <span class="text-3xl font-display font-medium text-brass-bright mt-1 block" x-text="previewData.attendance_records_affected"></span>
+                                </div>
+                                <div class="bg-surface-raised/40 p-4 rounded border border-hairline text-center">
+                                    <span class="text-[10px] font-bold text-vellum-muted uppercase tracking-wider block">Existing Overrides</span>
+                                    <span class="text-3xl font-display font-medium text-brass mt-1 block" x-text="previewData.existing_overrides"></span>
+                                </div>
+                                <div class="bg-surface-raised/40 p-4 rounded border border-hairline text-center">
+                                    <span class="text-[10px] font-bold text-vellum-muted uppercase tracking-wider block">Existing Leave Records</span>
+                                    <span class="text-3xl font-display font-medium text-brass mt-1 block" x-text="previewData.existing_leave_records"></span>
+                                </div>
+                                <div class="bg-surface-raised/40 p-4 rounded border border-hairline text-center font-sans">
+                                    <span class="text-[10px] font-bold text-vellum-muted uppercase tracking-wider block">Records That Will Change</span>
+                                    <span class="text-3xl font-display font-medium text-forest mt-1 block font-bold" x-text="previewData.records_that_will_change"></span>
                                 </div>
                             </div>
 
-                            <!-- Live Search Input -->
-                            <input type="text" x-model="employeeSearch" placeholder="Filter employee list by name or ID..." class="w-full bg-surface-raised border border-hairline rounded text-vellum px-3 py-2 text-sm focus:ring-1 focus:ring-brass focus:border-brass focus:outline-none">
-
-                            <!-- Scrollable list of Employees -->
-                            <div class="border border-hairline rounded bg-surface overflow-y-auto max-h-[250px] p-3 divide-y divide-hairline/10">
-                                <template x-for="emp in employees" :key="emp.id">
-                                    <label x-show="matchesSearch(emp)" class="flex items-center gap-3 text-sm text-vellum cursor-pointer py-2 hover:bg-brass/[0.04] px-2.5 rounded transition-colors select-none">
-                                        <input type="checkbox" name="user_ids[]" :value="emp.id" x-model="selectedEmployees" class="rounded bg-surface-raised border-hairline text-brass focus:ring-brass w-4 h-4">
-                                        <div class="flex-1 min-w-0">
-                                            <span class="font-medium truncate block" x-text="emp.name"></span>
-                                            <span class="text-[11px] text-vellum-muted font-mono" x-text="emp.employee_id"></span>
-                                        </div>
-                                    </label>
-                                </template>
+                            <!-- Conflict Message warning/error -->
+                            <div x-show="previewData.conflict_message" class="px-4 py-3.5 rounded border text-sm font-medium font-mono" :class="previewData.conflict_message.startsWith('Error') ? 'bg-burgundy-bg text-burgundy border-burgundy/30' : 'bg-cognac-bg text-cognac border-cognac/30'" x-cloak>
+                                <span x-text="previewData.conflict_message"></span>
                             </div>
-                            <div class="flex justify-between items-center text-[12px] font-medium mt-1 font-mono text-brass-bright bg-brass/[0.04] border border-brass/10 px-3 py-1.5 rounded">
-                                <span>Selection Scope Status:</span>
-                                <span x-text="selectedEmployees.length + ' employee(s) selected'"></span>
+
+                            <!-- Confirmation parameters summary box -->
+                            <div class="bg-walnut/[0.03] p-4 rounded border border-hairline/25 text-xs text-vellum-muted space-y-1">
+                                <span class="font-bold text-vellum block mb-1 text-[11px] uppercase tracking-wider">Configuration Summary</span>
+                                <div>Override Action: <span class="font-mono text-brass-bright font-semibold" x-text="status === 'half_day' ? 'HALF DAY' : (status === 'present' ? 'PRESENT' : (status === 'paid_leave' ? 'PAID LEAVE' : (status === 'unpaid_leave' ? 'UNPAID LEAVE' : 'WEEKLY OFF')))"></span></div>
+                                <div>Conflict Strategy: <span class="font-mono text-brass-bright font-semibold" x-text="conflictHandling.toUpperCase()"></span></div>
+                                <div class="pt-1.5 mt-1 border-t border-hairline/10">Reason: <span class="italic text-vellum font-semibold" x-text="'&ldquo;' + overrideReason + '&rdquo;'"></span></div>
                             </div>
                         </div>
-
                     </div>
-                </div>
-            </form>
+
+                    <!-- Step Validation Error Alert -->
+                    <div x-show="errorText" class="mt-4 bg-burgundy-bg text-burgundy border border-burgundy/30 px-4 py-3 rounded text-sm font-medium" x-cloak>
+                        <span x-text="errorText"></span>
+                    </div>
+
+                    <!-- Step Navigation Control Buttons -->
+                    <div class="flex justify-between items-center pt-6 border-t border-hairline/10 mt-6 select-none">
+                        <button type="button" x-show="step > 1" @click="prevStep()" class="inline-flex items-center justify-center bg-surface-raised text-vellum hover:bg-surface-raised/85 font-bold py-2 px-4 rounded text-xs uppercase tracking-wider border border-hairline shadow-sm h-[38px] transition duration-150">
+                            Back
+                        </button>
+                        <div x-show="step === 1" class="w-1"></div> <!-- Flex spacer -->
+
+                        <button type="button" x-show="step < 4" @click="nextStep()" class="inline-flex items-center justify-center bg-brass text-vellum font-bold py-2 px-4 rounded text-xs uppercase tracking-wider hover:bg-brass/90 transition duration-150 h-[38px] shadow-sm">
+                            Next
+                        </button>
+
+                        <button type="submit" x-show="step === 4" :disabled="loadingPreview || !!previewError || (previewData && previewData.conflict_message && previewData.conflict_message.startsWith('Error'))" class="inline-flex items-center justify-center bg-forest text-vellum font-bold py-2 px-6 rounded text-xs uppercase tracking-wider hover:bg-forest/90 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 h-[38px] shadow-sm select-none">
+                            Apply Override Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <!-- Tab 3: Override Audit Trail (Redesigned as Action Timeline) -->

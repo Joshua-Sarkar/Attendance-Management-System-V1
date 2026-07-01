@@ -325,7 +325,7 @@ class LeaveManagementTest extends TestCase
     }
 
     /** @test */
-    public function admin_can_create_unplanned_leave_and_receive_automatic_approval_with_deduction()
+    public function admin_can_create_unplanned_leave_and_receive_automatic_approval_without_deduction()
     {
         $startDate = Carbon::today()->addDays(2)->format('Y-m-d');
         $endDate = Carbon::today()->addDays(4)->format('Y-m-d');
@@ -346,9 +346,10 @@ class LeaveManagementTest extends TestCase
             'leave_type' => 'unplanned',
             'status' => 'approved',
             'approver_id' => $this->admin->id,
+            'is_paid' => false,
         ]);
 
-        $this->assertEquals($originalBalance - 3, $this->admin->fresh()->leave_balance);
+        $this->assertEquals($originalBalance, $this->admin->fresh()->leave_balance);
     }
 
     /** @test */

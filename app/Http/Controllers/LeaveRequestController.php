@@ -154,7 +154,7 @@ class LeaveRequestController extends Controller
 
         // Determine status based on approval hierarchy (Admins auto-approved for Planned/Unplanned/Unpaid)
         if ($user->role === 'admin') {
-            $isPaid = ($validated['leave_type'] !== 'unpaid');
+            $isPaid = ($validated['leave_type'] === 'planned' || $validated['leave_type'] === 'complimentary');
             if ($isPaid && $user->leave_balance < $totalDays) {
                 return back()->withErrors(['start_date' => "Insufficient leave balance. You have {$user->leave_balance} days available, but requested {$totalDays} days."])->withInput();
             }
@@ -224,7 +224,7 @@ class LeaveRequestController extends Controller
         }
 
         // Managers and Employees start as pending
-        $isPaid = ($validated['leave_type'] !== 'unpaid');
+        $isPaid = ($validated['leave_type'] === 'planned' || $validated['leave_type'] === 'complimentary');
         $leaveRequest = LeaveRequest::create([
             'user_id' => $user->id,
             'leave_type' => $validated['leave_type'],
@@ -322,13 +322,13 @@ class LeaveRequestController extends Controller
                             'type' => 'refund',
                             'description' => 'Birthday Leave cancelled',
                         ]);
-                    } elseif ($lockedRequest->leave_type === 'unpaid') {
+                    } elseif (in_array($lockedRequest->leave_type, ['unpaid', 'unplanned'])) {
                         LeaveLedgerEntry::create([
                             'user_id' => $lockedRequest->user_id,
                             'leave_request_id' => $lockedRequest->id,
                             'amount' => 0.00,
                             'type' => 'refund',
-                            'description' => 'Unpaid Leave cancelled',
+                            'description' => ucfirst($lockedRequest->leave_type) . ' Leave cancelled',
                         ]);
                     } else {
                         // Refund regular leave balance
@@ -398,8 +398,8 @@ class LeaveRequestController extends Controller
 
         $applicant = $leaveRequest->user;
 
-        // Balance Check for planned/unplanned leaves
-        if ($leaveRequest->leave_type !== 'complimentary' && $leaveRequest->leave_type !== 'unpaid' && $applicant->leave_balance < $leaveRequest->total_days) {
+        // Balance Check for planned leaves
+        if (!in_array($leaveRequest->leave_type, ['complimentary', 'unpaid', 'unplanned']) && $applicant->leave_balance < $leaveRequest->total_days) {
             return back()->with('error', "Insufficient leave balance. Employee has {$applicant->leave_balance} days available, but requested {$leaveRequest->total_days} days.");
         }
 
@@ -417,7 +417,7 @@ class LeaveRequestController extends Controller
                     'notes' => $validated['notes'] ?? null,
                 ]);
 
-                if ($lockedRequest->leave_type !== 'complimentary' && $lockedRequest->leave_type !== 'unpaid') {
+                if (!in_array($lockedRequest->leave_type, ['complimentary', 'unpaid', 'unplanned'])) {
                     $lockedUser = User::where('id', $applicant->id)->lockForUpdate()->first();
                     if ($lockedUser->leave_balance < $lockedRequest->total_days) {
                         throw new \Exception('Insufficient leave balance.');
@@ -433,13 +433,13 @@ class LeaveRequestController extends Controller
                         'type' => 'deduction',
                         'description' => 'Leave approved: ' . ucfirst($lockedRequest->leave_type) . ' Leave',
                     ]);
-                } elseif ($lockedRequest->leave_type === 'unpaid') {
+                } elseif (in_array($lockedRequest->leave_type, ['unpaid', 'unplanned'])) {
                     LeaveLedgerEntry::create([
                         'user_id' => $applicant->id,
                         'leave_request_id' => $lockedRequest->id,
                         'amount' => 0.00,
                         'type' => 'deduction',
-                        'description' => 'Unpaid Leave approved',
+                        'description' => ucfirst($lockedRequest->leave_type) . ' Leave approved',
                     ]);
                 } else {
                     LeaveLedgerEntry::create([
@@ -540,13 +540,13 @@ class LeaveRequestController extends Controller
                             'type' => 'refund',
                             'description' => 'Birthday Leave rejected',
                         ]);
-                    } elseif ($lockedRequest->leave_type === 'unpaid') {
+                    } elseif (in_array($lockedRequest->leave_type, ['unpaid', 'unplanned'])) {
                         LeaveLedgerEntry::create([
                             'user_id' => $applicant->id,
                             'leave_request_id' => $lockedRequest->id,
                             'amount' => 0.00,
                             'type' => 'refund',
-                            'description' => 'Unpaid Leave rejected',
+                            'description' => ucfirst($lockedRequest->leave_type) . ' Leave rejected',
                         ]);
                     } else {
                         // Refund regular balance
@@ -609,7 +609,7 @@ class LeaveRequestController extends Controller
         $shouldBeApproved = ($newOverrideStatus === 'approved');
 
         // Validation for Planned/Unplanned Leave balance checking
-        if (!$wasApproved && $shouldBeApproved && $leaveRequest->leave_type !== 'complimentary' && $leaveRequest->leave_type !== 'unpaid') {
+        if (!$wasApproved && $shouldBeApproved && !in_array($leaveRequest->leave_type, ['complimentary', 'unpaid', 'unplanned'])) {
             if ($applicant->leave_balance < $leaveRequest->total_days) {
                 return back()->with('error', "Insufficient leave balance. Employee has {$applicant->leave_balance} days available, but requested {$leaveRequest->total_days} days.");
             }
@@ -666,13 +666,13 @@ class LeaveRequestController extends Controller
                             'type' => 'refund',
                             'description' => 'Birthday Leave cancelled via admin override',
                         ]);
-                    } elseif ($lockedRequest->leave_type === 'unpaid') {
+                    } elseif (in_array($lockedRequest->leave_type, ['unpaid', 'unplanned'])) {
                         LeaveLedgerEntry::create([
                             'user_id' => $lockedUser->id,
                             'leave_request_id' => $lockedRequest->id,
                             'amount' => 0.00,
                             'type' => 'refund',
-                            'description' => 'Unpaid Leave cancelled via admin override',
+                            'description' => ucfirst($lockedRequest->leave_type) . ' Leave cancelled via admin override',
                         ]);
                     } else {
                         // Refund regular balance
@@ -714,7 +714,7 @@ class LeaveRequestController extends Controller
                             'type' => 'deduction',
                             'description' => 'Birthday Leave approved via admin override',
                         ]);
-                    } elseif ($lockedRequest->leave_type === 'unpaid') {
+                    } elseif (in_array($lockedRequest->leave_type, ['unpaid', 'unplanned'])) {
                         $lockedRequest->update([
                             'is_paid' => false,
                         ]);
@@ -724,7 +724,7 @@ class LeaveRequestController extends Controller
                             'leave_request_id' => $lockedRequest->id,
                             'amount' => 0.00,
                             'type' => 'deduction',
-                            'description' => 'Unpaid Leave approved via admin override',
+                            'description' => ucfirst($lockedRequest->leave_type) . ' Leave approved via admin override',
                         ]);
                     } else {
                         // Deduct regular balance

@@ -8,9 +8,9 @@ This document details the business rules, salary deduction structures, and calcu
 
 ### Intended Business Rule
 Payroll calculations are based on daily presence and leave metrics. Compensation deductions are calculated using the following rules:
-- **Full Paid Day**: Any day marked as `present` with `full_day` classification, or covered by an approved `paid_leave` (planned or unplanned), or a `complimentary` (birthday) leave, or `wfh` (Work From Home) status, or a default `weekly_off` (Sunday) is a full paid day (no deductions).
+- **Full Paid Day**: Any day marked as `present` with `full_day` classification, or covered by an approved `paid_leave` (planned), or a `complimentary` (birthday) leave, or `wfh` (Work From Home) status, or a default `weekly_off` (Sunday) is a full paid day (no deductions).
 - **Absent Deduction**: A day resolved as `absent` (excluding Sundays) results in a **1.0-day salary deduction** (LWP - Leave Without Pay).
-- **Unpaid Leave Deduction**: A day covered by a leave request approved specifically as **Unpaid Leave** results in a **1.0-day salary deduction**.
+- **Unpaid Leave / Unplanned Leave Deduction**: A day covered by an approved **Unpaid Leave** or **Unplanned Leave** request results in a **1.0-day salary deduction**.
 - **Half-Day Deduction**: A day classified as a `half_day` (regardless of whether it is due to a late arrival or checking out with insufficient hours) results in a **0.5-day salary deduction**.
 - **Overtime and Holidays**: Standard national holidays are paid. Work on public holidays or Sundays is subject to double pay or compensatory off policies.
 
